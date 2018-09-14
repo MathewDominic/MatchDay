@@ -49,5 +49,5 @@ if __name__ == '__main__':
             "stadium": match["venue"]["data"]["name"],
             "timestamp": match["time"]["starting_at"]["timestamp"] * 1000
         }
-        # doc_ref.set(obj)
+        doc_ref.set(obj)
         logging.info(str(match["id"]) + " : " + obj['localteam']['name'] + " v " + obj['visitorteam']['name'])
