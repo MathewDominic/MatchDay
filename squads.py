@@ -1,23 +1,29 @@
-from google.cloud import storage
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
+import os
 import requests
 import json
-cred = credentials.Certificate('/Users/mathew/Downloads/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json')
+import firebase_admin
+from google.cloud import storage
+from firebase_admin import credentials
+from firebase_admin import firestore
+
+from config import constants
+
+API_KEY = constants['SPORTSMONK_API_KEY']
+cred = credentials.Certificate(os.path.expanduser('~/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json'))
 firebase_admin.initialize_app(cred)
 storage_client = storage.Client()
 db = firestore.Client()
 
 
 pos = {1:"G", 2:"D", 3:"M", 4:"F"}
-url = "https://soccer.sportmonks.com/api/v2.0/standings/season/12962?api_token=1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc"
+url = "https://soccer.sportmonks.com/api/v2.0/standings/season/12962?api_token=" + API_KEY
 resp = requests.get(url)
 data = json.loads(resp.text)["data"]
 for group in data:
     for team in group["standings"]["data"]:
         print team["team_id"]
-        url = "https://soccer.sportmonks.com/api/v2.0/squad/season/12962/team/%s?api_token=1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc&include=player,position" % team["team_id"]
+        url = "https://soccer.sportmonks.com/api/v2.0/squad/season/12962/team/{TEAM_ID}?api_token={API_KEY}" \
+              "&include=player,position".format(TEAM_ID=team["team_id"], API_KEY=API_KEY)
         resp = requests.get(url)
         all_players = json.loads(resp.text)["data"]
         players = {}

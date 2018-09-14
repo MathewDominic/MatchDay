@@ -9,35 +9,12 @@ import traceback
 
 from firebase_admin import firestore,credentials
 from utils import initLogging
+from config import constants
 
-API_KEY = "1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc"
+API_KEY = constants['SPORTSMONK_API_KEY']
+EVENTS = constants['EVENTS']
+POINTS_DICT = constants['POINTS_DICT']
 
-EVENTS = {
-            "goal": "goal",
-            "substitution": "substitution",
-            "yellow card": "yellowcard",
-            "red card": "redcard",
-            "penalty miss": "missed_penalty",
-            "own goal": "own-goal"
-        }
-
-POINTS_DICT = {
-    "striker_score": 4,
-    "defender_score": 6,
-    "midfielder_score": 5,
-    "assist": 3,
-    "defender_no_concede": 4,
-    "midfielder_no_concede": 1,
-    "defender_goal_concede": -1,
-    "midfielder_goal_concede": 0,
-    "yellow_card": -1,
-    "red_card": -2,
-    "own_goal": -2,
-    "penalty_miss": -3,
-    "15_min_no_goal": 1,
-    "30_min_no_goal": 2,
-    "90_min_no_goal": 6
-}
 class MatchDay:
     def __init__(self, match_id):
         self.match_id = match_id
