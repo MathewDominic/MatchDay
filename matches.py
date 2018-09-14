@@ -18,7 +18,7 @@ db = firestore.Client()
 
 
 if __name__ == '__main__':
-    initLogging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
+    initLogging(logging.INFO, filename=os.path.expanduser('~/logs/matches.log'))
     tomorrow_date = str(datetime.date.today() + datetime.timedelta(days=1))
     logging.info("Matches for " + tomorrow_date)
     url = "https://soccer.sportmonks.com/api/v2.0/fixtures/date/{DATE}?" \

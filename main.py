@@ -140,16 +140,15 @@ class MatchDay:
         user_teams_to_update = list((self.db.collection('userTeams')
                                      .where(u'player_id', u'==', int(player_id))
                                      .where(u'matchId', u'==', int(self.match_id)))
-                                    .where(u'active', u'==', True)
+                                     .where(u'active', u'==', True)
                                     # .where(u'minuteOfExpiry', u'<=', int(event["minute"] + 30))
                                     # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
                                     .get())
         for team in user_teams_to_update:
-            if team._data['minuteOfBuy'] <= int(event["minute"]) and team._data['minuteOfExpiry'] >= int(
-                    event["minute"]):
+            if team._data['minuteOfBuy'] <= int(event["minute"]) <= team._data['minuteOfExpiry']:
                 doc = team._reference
                 self.db.document('userTeams/' + doc._path[1] + '/events/' + str(event["id"])).set(event_dict)
-                self.db.document('userTeams/' + doc._path[1]).update({'points': team._data['points'] + points})
+                self.db.document('userTeams1/' + doc._path[1]).update({'points': team._data['points'] + points})
 
     def get_next_minute_data(self, previous_minute):
         while True:
@@ -288,8 +287,8 @@ class MatchDay:
                         self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["30_min_no_goal"])
                     elif minutes == 90:
                         self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["90_min_no_goal"])
-                elif goals_conceded >= 2:
-                    self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "more_than_one_goal_conceded"}, POINTS_DICT["90_min_no_goal"])
+                # elif goals_conceded >= 2:
+                #     self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "more_than_one_goal_conceded"}, POINTS_DICT["90_min_no_goal"])
 
     # if no_goal:
     #     self.process_no_goal_minute(self.visitor_active_players)
@@ -325,7 +324,6 @@ class MatchDay:
 if __name__ == '__main__':
     try:
         initLogging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
-        print 1/0
         match_id = sys.argv[1]
         md = MatchDay(match_id)
         live_match_update = True if sys.argv[2] == "live" else False
