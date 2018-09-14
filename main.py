@@ -1,19 +1,15 @@
-import requests
-import json
-import time
-import firebase_admin
-import traceback
 import sys
 import os
-from firebase_admin import firestore,credentials
+import logging
+import json
+import time
+import requests
+import firebase_admin
+import traceback
 
-FIREBASE_CONFIG = {
-            "apiKey": "AIzaSyDdiQpxrhVOxdkDmFZbBX5ozBM7CJC3iLk",
-            "authDomain": "matchday-firebase.firebaseapp.com",
-            "databaseURL": "https://matchday-firebase.firebaseio.com/",
-            "storageBucket": "matchday-firebase.appspot.com",
-            "serviceAccount": "/Users/mathew/Downloads/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json"
-        }
+from firebase_admin import firestore,credentials
+from utils import initLogging
+
 API_KEY = "1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc"
 
 EVENTS = {
@@ -89,14 +85,14 @@ class MatchDay:
             self.id_to_player_dict[player["player_id"]] = {"name": player["player_name"], "position": player["position"]}
 
     def process_substitution(self, event, active_players):
-        print "subs", event["player_id"], event["related_player_id"]
+        logging.info("subs", event["player_id"], event["related_player_id"])
         # remove subbed off def
         if event["related_player_id"] in active_players:
-            print 'remove', event["related_player_id"], event["related_player_name"]
+            logging.info('remove', event["related_player_id"], event["related_player_name"])
             active_players.remove(event["related_player_id"])
 
         # add subbed on def
-        print 'add', event["player_id"], event["player_name"]
+        logging.info('add', event["player_id"], event["player_name"])
         active_players.append(event["player_id"])
 
         return active_players
@@ -104,25 +100,25 @@ class MatchDay:
     def process_goal_minute(self, event):
         # negative for defenders
         if int(event["team_id"]) == self.local_team_id:
-            print 'Concede', self.local_active_players
+            logging.info('Concede', self.local_active_players)
             for player in self.local_active_players:
                 pass
-                # print 'Concede', player
+                # logging.info('Concede', player)
         if int(event["team_id"]) == self.visitor_team_id:
-            print 'Concede', self.visitor_active_players
+            logging.info('Concede', self.visitor_active_players)
             for player in self.visitor_active_players:
                 pass
-                # print 'Concede', player
+                # logging.info('Concede', player)
 
         # plus for scorer/assist
-        print 'Goal', event["player_id"], event["player_name"]
-        print 'Assist', event["related_player_id"], event["related_player_name"]
+        logging.info('Goal', event["player_id"], event["player_name"])
+        logging.info('Assist', event["related_player_id"], event["related_player_name"])
 
     def process_no_goal_minute(self, defenders):
-        # print 'no goal minute', defenders
+        # logging.info('no goal minute', defenders)
         for player in defenders:
             pass
-            #print 'no goal minute', player
+            #logging.info('no goal minute', player)
 
     def get_points_for_goal(self, position):
         if position == 'F':
@@ -191,14 +187,14 @@ class MatchDay:
             self.match_doc_ref.update({"current_minute": time_obj["minute"], "current_second": time_obj["second"]})
             if time_obj.get("status") != 'LIVE':
                 previous_minute = int(data["minute"]) + 1
-                print 'not live, sleep for 60'
+                logging.info('not live, sleep for 60')
                 time.sleep(60)
                 continue
             if time_obj.get("minute") > previous_minute:
                 return data
             else:
-                # print 'sleep for 10'
-                # print "current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second"))
+                # logging.info('sleep for 10')
+                # logging.info("current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second")))
                 time.sleep(10)
                 continue
 
@@ -208,14 +204,14 @@ class MatchDay:
             return
         last_comment = comments[len(comments) - 1]
         if int(last_comment["minute"]) > int(last_comment_minute):
-            print "comment", last_comment["minute"], last_comment["comment"]
+            logging.info("comment", last_comment["minute"], last_comment["comment"])
         last_comment_minute = last_comment["minute"]
         return last_comment_minute
 
     def check_for_event(self, events):
         for event in events:
             if len(self.all_events) == 0:
-                print 'New event'
+                logging.info('New event')
                 self.process_event(event)
             else:
                 new_event = True
@@ -223,24 +219,24 @@ class MatchDay:
                     if event["id"] == old_event["id"]:
                         new_event = False
                         if event["minute"] != old_event["minute"]:
-                            print 'Event minute changed', event
+                            logging.info('Event minute changed', event)
                         if event["player_id"] != old_event["player_id"]:
-                            print 'Event player_id changed', event
+                            logging.info('Event player_id changed', event)
                             if event["type"] == "goal":
                                 position = self.id_to_player_dict[event['player_id']]['position']
                                 points = self.get_points_for_goal(position)
                                 self.process_point(event["player_id"], "goal", event, points)
                         if event["related_player_id"] != old_event["related_player_id"]:
-                            print 'Event related_player_id changed', event
+                            logging.info('Event related_player_id changed', event)
                             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
                 if new_event is True:
-                    print 'New event'
+                    logging.info('New event')
                     self.process_event(event)
 
     def process_event(self, event):
-        print "Event at minute", str(event["minute"])
+        logging.info("Event at minute", str(event["minute"]))
         if event["type"] == EVENTS["goal"] or event["type"] == "penalty":
-            print 'Goal', event["player_id"], event["player_name"]
+            logging.info('Goal', event["player_id"], event["player_name"])
 
             if int(event["team_id"]) == self.local_team_id:
                 self.visitor_concede_minutes.append(int(event["minute"]))
@@ -255,18 +251,18 @@ class MatchDay:
             points = self.get_points_for_goal(position)
             self.process_point(event["player_id"], "goal", event, points)
 
-            print 'Assist', event["related_player_id"], event["related_player_name"]
+            logging.info('Assist', event["related_player_id"], event["related_player_name"])
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["penalty miss"]:
-            print 'Penalty miss', event["player_id"], event["player_name"]
+            logging.info('Penalty miss', event["player_id"], event["player_name"])
             self.process_point(event["player_id"], "penalty miss", event, POINTS_DICT['penalty_miss'])
 
         elif event["type"] == EVENTS["own goal"]:
-            print 'Own goal', event["player_id"], event["player_name"]
+            logging.info('Own goal', event["player_id"], event["player_name"])
             self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
 
-            print 'Assist', event["related_player_id"], event["related_player_name"]
+            logging.info('Assist', event["related_player_id"], event["related_player_name"])
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["substitution"]:
@@ -278,15 +274,15 @@ class MatchDay:
                 self.db.document('active_players/' + self.match_id).update({"visitorteam_active_players": self.visitor_active_players})
 
         elif event["type"] == EVENTS["yellow card"]:
-            print 'Yellow card', event["player_id"], event["player_name"]
+            logging.info('Yellow card', event["player_id"], event["player_name"])
             self.process_point(event["player_id"], "yellow card", event, POINTS_DICT['yellow_card'])
 
         elif event["type"] == EVENTS["red card"]:
-            print 'Red card', event["player_id"], event["player_name"]
+            logging.info('Red card', event["player_id"], event["player_name"])
             self.process_point(event["player_id"], "red card", event, POINTS_DICT['red_card'])
 
         else:
-            print "no event in dict", event["type"]
+            logging.info("no event in dict", event["type"])
 
     def check_for_expiry(self, minute):
         players_expired = list((self.db.collection('userTeams')
@@ -351,6 +347,8 @@ class MatchDay:
 
 if __name__ == '__main__':
     try:
+        initLogging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
+        print 1/0
         match_id = sys.argv[1]
         md = MatchDay(match_id)
         live_match_update = True if sys.argv[2] == "live" else False
@@ -366,14 +364,14 @@ if __name__ == '__main__':
                 events = data["events"]["data"]
                 if time_obj.get("status") != 'LIVE' and time_obj.get("status") != 'ET':
                     if time_obj.get("status") == 'FT':
-                        print 'Game over'
+                        logging.info('Game over')
                         break
-                    print 'not live, sleep for 60'
+                    logging.info('not live, sleep for 60')
                     time.sleep(60)
                     continue
                 else:
-                    # print 'sleep for 10'
-                    # print "current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second"))
+                    # logging.info('sleep for 10')
+                    # logging.info("current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second")))
                     time_obj = data["time"]
                     if time_obj["minute"] > current_minute:
                         md.check_for_expiry(time_obj["minute"])
@@ -399,8 +397,8 @@ if __name__ == '__main__':
                 md.match_doc_ref.update({"current_minute": md.current_minute, "current_second": 0})
                 md.process_event(event)
             pass
-    except:
-        traceback.print_exc()
+    except Exception as e:
+        logging.error(traceback.format_exc())
 
 
 
