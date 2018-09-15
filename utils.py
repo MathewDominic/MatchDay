@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-def initLogging(LOG_LEVEL, filename=None, logger_name=""):
+def init_logging(LOG_LEVEL, filename=None, logger_name=""):
     if filename is not None:
         filename = filename
     logging.basicConfig(
@@ -33,3 +33,9 @@ def initLogging(LOG_LEVEL, filename=None, logger_name=""):
 
         return rootLogger
         # os.chmod(filepath, 0o766)
+
+
+def to_ascii(unicode_str):
+    if unicode_str is None:
+        return 'None'
+    return unicode_str.encode('ascii', 'ignore')

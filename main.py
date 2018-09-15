@@ -8,7 +8,7 @@ import firebase_admin
 import traceback
 
 from firebase_admin import firestore,credentials
-from utils import initLogging
+from utils import init_logging, to_ascii
 from config import constants
 
 API_KEY = constants['SPORTSMONK_API_KEY']
@@ -65,11 +65,11 @@ class MatchDay:
         logging.info("subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
         # remove subbed off def
         if event["related_player_id"] in active_players:
-            logging.info('remove' + ' ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
+            logging.info('remove' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             active_players.remove(event["related_player_id"])
 
         # add subbed on def
-        logging.info('add' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
+        logging.info('add' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
         active_players.append(event["player_id"])
 
         return active_players
@@ -101,7 +101,7 @@ class MatchDay:
                 self.player_points[player_id] = 0
             self.player_stats[player_id].append(event_dict)
             try:
-                self.db.document('player_stats/' + str(player_id) + '/events/' + str(event["id"])).update(event_dict)
+                self.db.document('player_stats/' + player_id + '/events/' + str(event["id"])).update(event_dict)
             except:
                 self.db.document('player_stats/' + str(player_id)).set({"total_points": self.player_points[player_id]})
                 self.db.document('player_stats/' + str(player_id)).update({"player_details": self.id_to_player_dict[player_id]})
@@ -138,7 +138,7 @@ class MatchDay:
             return
         last_comment = comments[len(comments) - 1]
         if int(last_comment["minute"]) > int(last_comment_minute):
-            logging.info("comment" + ' ' + str(last_comment["minute"]) + ' ' + str(last_comment["comment"]))
+            logging.info("comment" + ' ' + str(last_comment["minute"]) + ' ' + to_ascii(last_comment["comment"]))
         last_comment_minute = last_comment["minute"]
         return last_comment_minute
 
@@ -170,7 +170,7 @@ class MatchDay:
     def process_event(self, event):
         logging.info("Event at minute" + ' ' + str(event.get("minute", -1)))
         if event["type"] == EVENTS["goal"] or event["type"] == "penalty":
-            logging.info('Goal' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
+            logging.info('Goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
 
             if int(event["team_id"]) == self.local_team_id:
                 self.visitor_concede_minutes.append(int(event["minute"]))
@@ -185,18 +185,18 @@ class MatchDay:
             points = self.get_points_for_goal(position)
             self.process_point(event["player_id"], "goal", event, points)
 
-            logging.info('Assist ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
+            logging.info('Assist ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["penalty miss"]:
-            logging.info('Penalty miss' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
+            logging.info('Penalty miss' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "penalty miss", event, POINTS_DICT['penalty_miss'])
 
         elif event["type"] == EVENTS["own goal"]:
-            logging.info('Own goal' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
+            logging.info('Own goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
 
-            logging.info('Assist' + ' ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
+            logging.info('Assist' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["substitution"]:
@@ -208,11 +208,11 @@ class MatchDay:
                 self.db.document('active_players/' + self.match_id).update({"visitorteam_active_players": self.visitor_active_players})
 
         elif event["type"] == EVENTS["yellow card"]:
-            logging.info('Yellow card' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
+            logging.info('Yellow card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "yellow card", event, POINTS_DICT['yellow_card'])
 
         elif event["type"] == EVENTS["red card"]:
-            logging.info('Red card' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
+            logging.info('Red card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "red card", event, POINTS_DICT['red_card'])
 
         else:
@@ -281,7 +281,7 @@ class MatchDay:
 
 if __name__ == '__main__':
     try:
-        initLogging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
+        init_logging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
         match_id = sys.argv[1]
         md = MatchDay(match_id)
         live_match_update = True if sys.argv[2] == "live" else False
