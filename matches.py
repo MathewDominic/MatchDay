@@ -32,6 +32,7 @@ if __name__ == '__main__':
         doc_ref = db.document('matches/' + str(match["id"]))
         obj = {
             "id": match["id"],
+            "started": False,
             "localteam": {
                 "id": match["localteam_id"],
                 "name": match["localTeam"]["data"]["name"],

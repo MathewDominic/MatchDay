@@ -58,7 +58,8 @@ for group in data:
             }
             players[str(player["player_id"])] = obj
             # doc_ref.set(obj)
-        resp = requests.get("https://soccer.sportmonks.com/api/v2.0/teams/" + str(team["team_id"]) + "?api_token=1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc&include=country,squad,coach,venue,stats")
+        resp = requests.get("https://soccer.sportmonks.com/api/v2.0/teams/" + str(team["team_id"]) +
+                            "?api_token=" + API_KEY + "&include=country,squad,coach,venue,stats")
         logo = json.loads(resp.text)["data"]["logo_path"]
         doc_ref = db.document('squads/' + str(team["team_id"]))
         doc_ref.set({"name": team["team_name"], "players": players, "logo":logo})

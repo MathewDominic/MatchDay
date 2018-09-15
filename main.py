@@ -148,7 +148,7 @@ class MatchDay:
             if team._data['minuteOfBuy'] <= int(event["minute"]) <= team._data['minuteOfExpiry']:
                 doc = team._reference
                 self.db.document('userTeams/' + doc._path[1] + '/events/' + str(event["id"])).set(event_dict)
-                self.db.document('userTeams1/' + doc._path[1]).update({'points': team._data['points'] + points})
+                self.db.document('userTeams/' + doc._path[1]).update({'points': team._data['points'] + points})
 
     def get_next_minute_data(self, previous_minute):
         while True:
