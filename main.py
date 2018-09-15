@@ -62,14 +62,14 @@ class MatchDay:
             self.id_to_player_dict[player["player_id"]] = {"name": player["player_name"], "position": player["position"]}
 
     def process_substitution(self, event, active_players):
-        logging.info("subs" + ' ' + event["player_id"] + ' ' + event["related_player_id"])
+        logging.info("subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
         # remove subbed off def
         if event["related_player_id"] in active_players:
-            logging.info('remove' + ' ' + event["related_player_id"] + ' ' + event["related_player_name"])
+            logging.info('remove' + ' ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
             active_players.remove(event["related_player_id"])
 
         # add subbed on def
-        logging.info('add' + ' ' + event["player_id"] + ' ' + event["player_name"])
+        logging.info('add' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
         active_players.append(event["player_id"])
 
         return active_players
@@ -138,7 +138,7 @@ class MatchDay:
             return
         last_comment = comments[len(comments) - 1]
         if int(last_comment["minute"]) > int(last_comment_minute):
-            logging.info("comment" + ' ' + last_comment["minute"] + ' ' + last_comment["comment"])
+            logging.info("comment" + ' ' + str(last_comment["minute"]) + ' ' + str(last_comment["comment"]))
         last_comment_minute = last_comment["minute"]
         return last_comment_minute
 
@@ -170,7 +170,7 @@ class MatchDay:
     def process_event(self, event):
         logging.info("Event at minute" + ' ' + str(event.get("minute", -1)))
         if event["type"] == EVENTS["goal"] or event["type"] == "penalty":
-            logging.info('Goal' + ' ' + event["player_id"] + ' ' + event["player_name"])
+            logging.info('Goal' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
 
             if int(event["team_id"]) == self.local_team_id:
                 self.visitor_concede_minutes.append(int(event["minute"]))
@@ -185,18 +185,18 @@ class MatchDay:
             points = self.get_points_for_goal(position)
             self.process_point(event["player_id"], "goal", event, points)
 
-            logging.info('Assist ' + event["related_player_id"] + ' ' + event["related_player_name"])
+            logging.info('Assist ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["penalty miss"]:
-            logging.info('Penalty miss' + ' ' + event["player_id"] + ' ' + event["player_name"])
+            logging.info('Penalty miss' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
             self.process_point(event["player_id"], "penalty miss", event, POINTS_DICT['penalty_miss'])
 
         elif event["type"] == EVENTS["own goal"]:
-            logging.info('Own goal' + ' ' + event["player_id"] + ' ' + event["player_name"])
+            logging.info('Own goal' + ' ' + str(event["player_id"]) + ' ' + str(event["player_name"]))
             self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
 
-            logging.info('Assist' + ' ' + event["related_player_id"] + ' ' + event["related_player_name"])
+            logging.info('Assist' + ' ' + str(event["related_player_id"]) + ' ' + str(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["substitution"]:
@@ -208,15 +208,15 @@ class MatchDay:
                 self.db.document('active_players/' + self.match_id).update({"visitorteam_active_players": self.visitor_active_players})
 
         elif event["type"] == EVENTS["yellow card"]:
-            logging.info('Yellow card' + ' ' + event["player_id"] + ' ' + event["player_name"])
+            logging.info('Yellow card' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
             self.process_point(event["player_id"], "yellow card", event, POINTS_DICT['yellow_card'])
 
         elif event["type"] == EVENTS["red card"]:
-            logging.info('Red card' + ' ' + event["player_id"] + ' ' + event["player_name"])
+            logging.info('Red card' + ' ' + str(event["player_id"]) + ' ' + event["player_name"])
             self.process_point(event["player_id"], "red card", event, POINTS_DICT['red_card'])
 
         else:
-            logging.info("no event in dict" + ' ' + event["type"])
+            logging.info("no event in dict" + ' ' + str(event["type"]))
 
     def check_for_expiry(self, minute):
         players_expired = list((self.db.collection('userTeams')
