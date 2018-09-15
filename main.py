@@ -62,40 +62,17 @@ class MatchDay:
             self.id_to_player_dict[player["player_id"]] = {"name": player["player_name"], "position": player["position"]}
 
     def process_substitution(self, event, active_players):
-        logging.info("subs", event["player_id"], event["related_player_id"])
+        logging.info("subs" + ' ' + event["player_id"] + ' ' + event["related_player_id"])
         # remove subbed off def
         if event["related_player_id"] in active_players:
-            logging.info('remove', event["related_player_id"], event["related_player_name"])
+            logging.info('remove' + ' ' + event["related_player_id"] + ' ' + event["related_player_name"])
             active_players.remove(event["related_player_id"])
 
         # add subbed on def
-        logging.info('add', event["player_id"], event["player_name"])
+        logging.info('add' + ' ' + event["player_id"] + ' ' + event["player_name"])
         active_players.append(event["player_id"])
 
         return active_players
-
-    def process_goal_minute(self, event):
-        # negative for defenders
-        if int(event["team_id"]) == self.local_team_id:
-            logging.info('Concede', self.local_active_players)
-            for player in self.local_active_players:
-                pass
-                # logging.info('Concede', player)
-        if int(event["team_id"]) == self.visitor_team_id:
-            logging.info('Concede', self.visitor_active_players)
-            for player in self.visitor_active_players:
-                pass
-                # logging.info('Concede', player)
-
-        # plus for scorer/assist
-        logging.info('Goal', event["player_id"], event["player_name"])
-        logging.info('Assist', event["related_player_id"], event["related_player_name"])
-
-    def process_no_goal_minute(self, defenders):
-        # logging.info('no goal minute', defenders)
-        for player in defenders:
-            pass
-            #logging.info('no goal minute', player)
 
     def get_points_for_goal(self, position):
         if position == 'F':
@@ -140,7 +117,7 @@ class MatchDay:
         user_teams_to_update = list((self.db.collection('userTeams')
                                      .where(u'player_id', u'==', int(player_id))
                                      .where(u'matchId', u'==', int(self.match_id)))
-                                     .where(u'active', u'==', True)
+                                     # .where(u'active', u'==', True)
                                     # .where(u'minuteOfExpiry', u'<=', int(event["minute"] + 30))
                                     # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
                                     .get())
@@ -149,30 +126,11 @@ class MatchDay:
                 doc = team._reference
                 self.db.document('userTeams/' + doc._path[1] + '/events/' + str(event["id"])).set(event_dict)
                 self.db.document('userTeams/' + doc._path[1]).update({'points': team._data['points'] + points})
+                self.update_leaderboard(team._data['userId'], points)
 
-    def get_next_minute_data(self, previous_minute):
-        while True:
-            match_url = "https://soccer.sportmonks.com/api/v2.0/fixtures/" + match_id + "?api_token=" + API_KEY + \
-                        "&include=events,stats,comments"
-            resp = requests.get(match_url)
-            data = json.loads(resp.text)["data"]
-            time_obj = data["time"]
-            if time_obj["minute"] > self.current_minute:
-                self.check_for_expiry(time_obj["minute"])
-            self.current_minute = time_obj["minute"]
-            self.match_doc_ref.update({"current_minute": time_obj["minute"], "current_second": time_obj["second"]})
-            if time_obj.get("status") != 'LIVE':
-                previous_minute = int(data["minute"]) + 1
-                logging.info('not live, sleep for 60')
-                time.sleep(60)
-                continue
-            if time_obj.get("minute") > previous_minute:
-                return data
-            else:
-                # logging.info('sleep for 10')
-                # logging.info("current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second")))
-                time.sleep(10)
-                continue
+    def update_leaderboard(self, user_id, points):
+        pass
+
 
     def get_comments(self, last_comment_minute, data):
         comments = data["comments"]["data"]
@@ -180,7 +138,7 @@ class MatchDay:
             return
         last_comment = comments[len(comments) - 1]
         if int(last_comment["minute"]) > int(last_comment_minute):
-            logging.info("comment", last_comment["minute"], last_comment["comment"])
+            logging.info("comment" + ' ' + last_comment["minute"] + ' ' + last_comment["comment"])
         last_comment_minute = last_comment["minute"]
         return last_comment_minute
 
@@ -195,24 +153,24 @@ class MatchDay:
                     if event["id"] == old_event["id"]:
                         new_event = False
                         if event["minute"] != old_event["minute"]:
-                            logging.info('Event minute changed', event)
+                            logging.info('Event minute changed' + ' ' + str(event))
                         if event["player_id"] != old_event["player_id"]:
-                            logging.info('Event player_id changed', event)
+                            logging.info('Event player_id changed' + ' ' + str(event))
                             if event["type"] == "goal":
                                 position = self.id_to_player_dict[event['player_id']]['position']
                                 points = self.get_points_for_goal(position)
                                 self.process_point(event["player_id"], "goal", event, points)
                         if event["related_player_id"] != old_event["related_player_id"]:
-                            logging.info('Event related_player_id changed', event)
+                            logging.info('Event related_player_id changed' + ' ' + str(event))
                             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
                 if new_event is True:
                     logging.info('New event')
                     self.process_event(event)
 
     def process_event(self, event):
-        logging.info("Event at minute", str(event["minute"]))
+        logging.info("Event at minute" + ' ' + str(event.get("minute", -1)))
         if event["type"] == EVENTS["goal"] or event["type"] == "penalty":
-            logging.info('Goal', event["player_id"], event["player_name"])
+            logging.info('Goal' + ' ' + event["player_id"] + ' ' + event["player_name"])
 
             if int(event["team_id"]) == self.local_team_id:
                 self.visitor_concede_minutes.append(int(event["minute"]))
@@ -227,18 +185,18 @@ class MatchDay:
             points = self.get_points_for_goal(position)
             self.process_point(event["player_id"], "goal", event, points)
 
-            logging.info('Assist', event["related_player_id"], event["related_player_name"])
+            logging.info('Assist ' + event["related_player_id"] + ' ' + event["related_player_name"])
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["penalty miss"]:
-            logging.info('Penalty miss', event["player_id"], event["player_name"])
+            logging.info('Penalty miss' + ' ' + event["player_id"] + ' ' + event["player_name"])
             self.process_point(event["player_id"], "penalty miss", event, POINTS_DICT['penalty_miss'])
 
         elif event["type"] == EVENTS["own goal"]:
-            logging.info('Own goal', event["player_id"], event["player_name"])
+            logging.info('Own goal' + ' ' + event["player_id"] + ' ' + event["player_name"])
             self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
 
-            logging.info('Assist', event["related_player_id"], event["related_player_name"])
+            logging.info('Assist' + ' ' + event["related_player_id"] + ' ' + event["related_player_name"])
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["substitution"]:
@@ -250,15 +208,15 @@ class MatchDay:
                 self.db.document('active_players/' + self.match_id).update({"visitorteam_active_players": self.visitor_active_players})
 
         elif event["type"] == EVENTS["yellow card"]:
-            logging.info('Yellow card', event["player_id"], event["player_name"])
+            logging.info('Yellow card' + ' ' + event["player_id"] + ' ' + event["player_name"])
             self.process_point(event["player_id"], "yellow card", event, POINTS_DICT['yellow_card'])
 
         elif event["type"] == EVENTS["red card"]:
-            logging.info('Red card', event["player_id"], event["player_name"])
+            logging.info('Red card' + ' ' + event["player_id"] + ' ' + event["player_name"])
             self.process_point(event["player_id"], "red card", event, POINTS_DICT['red_card'])
 
         else:
-            logging.info("no event in dict", event["type"])
+            logging.info("no event in dict" + ' ' + event["type"])
 
     def check_for_expiry(self, minute):
         players_expired = list((self.db.collection('userTeams')
