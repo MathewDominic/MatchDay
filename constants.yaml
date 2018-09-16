@@ -1,4 +1,7 @@
+ROOT_PATH: /Users/mathew/gitProjects/MatchDay/
 SPORTSMONK_API_KEY : 1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc
+LEAGUES:
+  - 8
 
 EVENTS:
     goal: goal
