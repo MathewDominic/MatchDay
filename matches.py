@@ -7,7 +7,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from config import constants
-from utils import initLogging
+from utils import init_logging
 
 API_KEY = constants['SPORTSMONK_API_KEY']
 EPL_ID = 8
@@ -18,7 +18,7 @@ db = firestore.Client()
 
 
 if __name__ == '__main__':
-    initLogging(logging.INFO, filename=os.path.expanduser('~/logs/matches.log'))
+    init_logging(logging.INFO, filename=os.path.expanduser('~/logs/matches.log'))
     tomorrow_date = str(datetime.date.today() + datetime.timedelta(days=1))
     logging.info("Matches for " + tomorrow_date)
     url = "https://soccer.sportmonks.com/api/v2.0/fixtures/date/{DATE}?" \

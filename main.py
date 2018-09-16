@@ -97,21 +97,24 @@ class MatchDay:
             }
             if player_id not in self.player_stats:
                 self.player_stats[player_id] = []
-            if player_id not in self.player_points:
-                self.player_points[player_id] = 0
             self.player_stats[player_id].append(event_dict)
+            if player_id not in self.player_points:
+                self.player_points[player_id] = points
+            else:
+                self.player_points[player_id] = self.player_points[player_id] + points
             try:
-                self.db.document('player_stats/' + player_id + '/events/' + str(event["id"])).update(event_dict)
+                self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id) + '/events/' + str(event["id"])).update(event_dict)
             except:
-                self.db.document('player_stats/' + str(player_id)).set({"total_points": self.player_points[player_id]})
-                self.db.document('player_stats/' + str(player_id)).update({"player_details": self.id_to_player_dict[player_id]})
-                self.db.document('player_stats/' + str(player_id)).update({"match_id": int(self.match_id)})
-                self.db.document('player_stats/' + str(player_id) + '/events/' + str(event["id"])).set(event_dict)
+                self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id)).set(
+                    {
+                        "total_points": self.player_points[player_id],
+                        "player_details": self.id_to_player_dict[player_id],
+                        "match_id": int(self.match_id)
+                    })
+                self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id) + '/events/' + str(event["id"])).set(event_dict)
 
-            self.player_points[player_id] = self.player_points[player_id] + points
-            self.db.document('player_stats/' + str(player_id)).update({"total_points": self.player_points[player_id]})
+            self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id)).update({"total_points": self.player_points[player_id]})
             self.update_user_teams(player_id, event_dict, points)
-            pass
 
     def update_user_teams(self, player_id, event_dict, points):
         user_teams_to_update = list((self.db.collection('userTeams')
