@@ -23,5 +23,8 @@ if __name__ == '__main__':
     matches = json.loads(resp.text)["data"]
     for match in matches:
         if match['league_id'] in constants['LEAGUES']:
-            cmd = "python {PATH}main.py {MATCH_ID} live".format(PATH=constants['ROOT_PATH'], MATCH_ID=match['id'])
-            subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+            match_doc = db.document('matches/' + str(match['id'])).get()
+            if match_doc._data['started'] is False:
+                db.document('matches/' + str(match['id'])).update({"started":True})
+                cmd = "python {PATH}main.py {MATCH_ID} live".format(PATH=constants['ROOT_PATH'], MATCH_ID=match['id'])
+                subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
