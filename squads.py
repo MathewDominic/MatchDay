@@ -11,7 +11,6 @@ from config import constants
 API_KEY = constants['SPORTSMONK_API_KEY']
 cred = credentials.Certificate(os.path.expanduser('~/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json'))
 firebase_admin.initialize_app(cred)
-storage_client = storage.Client()
 db = firestore.Client()
 
 

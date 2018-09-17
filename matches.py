@@ -20,9 +20,9 @@ if __name__ == '__main__':
     init_logging(logging.INFO, filename=os.path.expanduser('~/logs/matches.log'))
     tomorrow_date = str(datetime.date.today() + datetime.timedelta(days=1))
     logging.info("Matches for " + tomorrow_date)
-    url = "https://soccer.sportmonks.com/api/v2.0/fixtures/date/2018-09-16?" \
-          "api_token=1SAjp0SrVOW9zgGST7ueE8XbQ5KCGopDefTwRTaDu0RvXLmGOmRYHJsBXQNc&include=" \
-          "localTeam,visitorTeam,venue,stage,round,league,season,group".format(DATE=tomorrow_date)
+    url = "https://soccer.sportmonks.com/api/v2.0/fixtures/date/{DATE}?" \
+          "api_token={API_KEY}&include=" \
+          "localTeam,visitorTeam,venue,stage,round,league,season,group".format(DATE=tomorrow_date,API_KEY=API_KEY)
     resp = requests.get(url)
     matches = json.loads(resp.text)["data"]
     for match in matches:
