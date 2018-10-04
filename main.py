@@ -295,7 +295,11 @@ if __name__ == '__main__':
                 match_url = "https://soccer.sportmonks.com/api/v2.0/fixtures/" + match_id + "?api_token=" + API_KEY + \
                             "&include=events,stats,comments"
                 resp = requests.get(match_url)
-                data = json.loads(resp.text)["data"]
+                try:
+                    data = json.loads(resp.text)["data"]
+                except:
+                    time.sleep(10)
+                    continue
                 time_obj = data["time"]
                 events = data["events"]["data"]
                 if time_obj.get("status") != 'LIVE' and time_obj.get("status") != 'ET':
