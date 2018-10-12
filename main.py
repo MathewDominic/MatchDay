@@ -135,7 +135,7 @@ class MatchDay:
         try:
             leaderboard_data = self.db.document('leaderboard/' + str(self.match_id)).get()._data
             if user_id in leaderboard_data:
-                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: leaderboard_data.user_id + points})
+                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: leaderboard_data[str(user_id)] + points})
             else:
                 self.db.document('leaderboard/' + str(self.match_id)).update({user_id: points})
         except:
