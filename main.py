@@ -132,7 +132,14 @@ class MatchDay:
                 self.update_leaderboard(team._data['userId'], points)
 
     def update_leaderboard(self, user_id, points):
-        pass
+        try:
+            leaderboard_data = self.db.document('leaderboard/' + str(self.match_id)).get()._data
+            if user_id in leaderboard_data:
+                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: leaderboard_data.user_id + points})
+            else:
+                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: points})
+        except:
+            self.db.document('leaderboard/' + str(self.match_id)).set({user_id: points})
 
 
     def get_comments(self, last_comment_minute, data):
@@ -233,7 +240,7 @@ class MatchDay:
             if (player._data['minuteOfExpiry'] + 2) < minute:
                 doc = player._reference
                 self.db.document('userTeams/' + doc._path[1]).update({'active':False})
-                if player._data['position'] != 'Defender':
+                if player._data['player_position'] != 'Defender':
                     continue
                 concede_minutes = md.local_concede_minutes if player._data['is_local_team_player'] is True else md.visitor_concede_minutes
                 goals_conceded = 0
@@ -243,7 +250,7 @@ class MatchDay:
                 if goals_conceded == 0:
                     minutes = player._data['duration']
                     event = {  # dummy event dict
-                        "id": int(str(player._data['player_id']) + str(minutes)),
+                        "id": 1,
                         "minute": minutes
                     }
                     if minutes == 15:
