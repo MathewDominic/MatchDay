@@ -315,6 +315,7 @@ if __name__ == '__main__':
                 events = data["events"]["data"]
                 if time_obj.get("status") != 'LIVE' and time_obj.get("status") != 'ET':
                     if time_obj.get("status") == 'FT':
+                        md.check_for_expiry(150)
                         logging.info('Game over')
                         break
                     logging.info('not live, sleep for 60')
