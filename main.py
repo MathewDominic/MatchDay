@@ -114,9 +114,9 @@ class MatchDay:
                 self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id) + '/events/' + str(event["id"])).set(event_dict)
 
             self.db.document('player_stats/' + str(self.match_id) + '_' + str(player_id)).update({"total_points": self.player_points[player_id]})
-            self.update_user_teams(player_id, event_dict, points)
+            self.update_user_teams(event, player_id, event_dict, points)
 
-    def update_user_teams(self, player_id, event_dict, points):
+    def update_user_teams(self, event, player_id, event_dict, points):
         user_teams_to_update = list((self.db.collection('userTeams')
                                      .where(u'player_id', u'==', int(player_id))
                                      .where(u'matchId', u'==', int(self.match_id)))
@@ -242,12 +242,16 @@ class MatchDay:
                         goals_conceded = goals_conceded + 1
                 if goals_conceded == 0:
                     minutes = player._data['duration']
+                    event = {  # dummy event dict
+                        "id": int(str(player._data['player_id']) + str(minutes)),
+                        "minute": minutes
+                    }
                     if minutes == 15:
-                        self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["15_min_no_goal"])
+                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["15_min_no_goal"])
                     elif minutes == 30:
-                        self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["30_min_no_goal"])
+                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["30_min_no_goal"])
                     elif minutes == 90:
-                        self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["90_min_no_goal"])
+                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["90_min_no_goal"])
                 # elif goals_conceded >= 2:
                 #     self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "more_than_one_goal_conceded"}, POINTS_DICT["90_min_no_goal"])
 
