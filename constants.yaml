@@ -28,3 +28,9 @@ POINTS_DICT:
     15_min_no_goal: 1
     30_min_no_goal: 2
     90_min_no_goal: 6
+
+POSITION_DICT:
+    D: Defender
+    M: Midfielder
+    F: Attacker
+    G: Defender
