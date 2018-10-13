@@ -6,6 +6,7 @@ import time
 import requests
 import firebase_admin
 import traceback
+import random
 
 from firebase_admin import firestore,credentials
 from utils import init_logging, to_ascii
@@ -14,6 +15,8 @@ from config import constants
 API_KEY = constants['SPORTSMONK_API_KEY']
 EVENTS = constants['EVENTS']
 POINTS_DICT = constants['POINTS_DICT']
+POSITION_DICT = constants['POSITION_DICT']
+
 
 class MatchDay:
     def __init__(self, match_id):
@@ -22,6 +25,7 @@ class MatchDay:
         firebase_admin.initialize_app(cred)
         self.db = firestore.Client()
         self.match_doc_ref= self.db.document('matches/' + match_id)
+        self.match_doc_ref.update({"current_minute": 0, "current_second": 0})
         self.id_to_player_dict = {}
         self.player_stats = {}
         self.player_points = {}
@@ -45,6 +49,7 @@ class MatchDay:
         self.all_events = data["events"]["data"]
         self.populate_starting_players()
         self.populate_bench_players()
+        self.add_bots()
 
     def populate_starting_players(self):
         for player in self.starting_xi:
@@ -60,6 +65,34 @@ class MatchDay:
     def populate_bench_players(self):
         for player in self.subs:
             self.id_to_player_dict[player["player_id"]] = {"name": player["player_name"], "position": player["position"]}
+
+    def add_bots(self):
+        bots = ["bot1", "bot2"]
+        for bot in bots:
+            players = []
+            while len(players) < 10:
+                if len(players) < 5:
+                    player = random.choice(self.local_active_players)
+                else:
+                    player = random.choice(self.visitor_active_players)
+                if player not in players:
+                    players.append(player)
+            logging.info(bot + str(players))
+            for player in players:
+                user_team_obj = {
+                    "active": True,
+                    "duration": 90,
+                    "isLocal": True,
+                    "matchId": int(self.match_id),
+                    "player_id": player,
+                    "points": 0,
+                    "userId": unicode(bot),
+                    "player_position": unicode(POSITION_DICT[self.id_to_player_dict[player]['position']]),
+                    "is_local_team_player": player in self.local_active_players
+                }
+                self.db.document('userTeams/' + bot + str(player)).set(user_team_obj)
+
+
 
     def process_substitution(self, event, active_players):
         logging.info("subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
@@ -340,7 +373,6 @@ if __name__ == '__main__':
             resp = requests.get(match_url)
             data = json.loads(resp.text)["data"]
             events = data["events"]["data"]
-
             events = sorted(data["events"]["data"], key=lambda event: event['minute'])
             for event in events:
                 if event["minute"] > md.current_minute:
@@ -348,7 +380,7 @@ if __name__ == '__main__':
                 md.current_minute = event["minute"]
                 md.match_doc_ref.update({"current_minute": md.current_minute, "current_second": 0})
                 md.process_event(event)
-            pass
+            md.check_for_expiry(150)
     except Exception as e:
         logging.error(traceback.format_exc())
 
