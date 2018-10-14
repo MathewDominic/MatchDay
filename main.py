@@ -9,7 +9,7 @@ import traceback
 import random
 
 from firebase_admin import firestore,credentials
-from utils import init_logging, to_ascii
+from utils import init_logging, to_ascii, send_error_mail
 from config import constants
 
 API_KEY = constants['SPORTSMONK_API_KEY']
@@ -60,7 +60,6 @@ class MatchDay:
             else:
                 self.visitor_active_players.append(player['player_id'])
         self.db.document('active_players/' + self.match_id).set({"localteam_active_players": self.local_active_players, "visitorteam_active_players": self.visitor_active_players})
-        # self.match_doc_ref.update({"localteam_active_players": self.local_active_players,"visitorteam_active_players": self.visitor_active_players})
 
     def populate_bench_players(self):
         for player in self.subs:
@@ -91,8 +90,6 @@ class MatchDay:
                     "is_local_team_player": player in self.local_active_players
                 }
                 self.db.document('userTeams/' + bot + str(player)).set(user_team_obj)
-
-
 
     def process_substitution(self, event, active_players):
         logging.info("subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
@@ -173,7 +170,6 @@ class MatchDay:
                 self.db.document('leaderboard/' + str(self.match_id)).update({user_id: points})
         except:
             self.db.document('leaderboard/' + str(self.match_id)).set({user_id: points})
-
 
     def get_comments(self, last_comment_minute, data):
         comments = data["comments"]["data"]
@@ -326,6 +322,7 @@ class MatchDay:
     #                 data = {"matches/" + self.match_id + "/user_teams" + "/" + user_team + "/" + player_with_point + "/total_points": current_total_points + player_point}
     #                 db.update(data)
 
+
 if __name__ == '__main__':
     try:
         init_logging(logging.INFO, filename=os.path.expanduser('~/logs/main.log'))
@@ -383,6 +380,7 @@ if __name__ == '__main__':
             md.check_for_expiry(150)
     except Exception as e:
         logging.error(traceback.format_exc())
+        send_error_mail(constants.NOTIF_MAIL, traceback.format_exc())
 
 
 
