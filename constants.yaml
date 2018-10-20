@@ -1,9 +1,12 @@
 ROOT_PATH: /root/MatchDay/
 SPORTSMONK_API_KEY : ts9Q6zWpuGTnDklmDLznQhYOfOSAEq3OhzWGefrlnqnldIw2NzwyzFMocvAY
+NOTIF_MAIL:
+  - mathew.puthur@gmail.com
 LEAGUES:
   - 8
   - 2
   - 5
+
 EVENTS:
     goal: goal
     substitution: substitution
@@ -17,16 +20,13 @@ POINTS_DICT:
     defender_score: 6
     midfielder_score: 5
     assist: 3
-    defender_no_concede: 4
-    midfielder_no_concede: 1
-    defender_goal_concede: -1
-    midfielder_goal_concede: 0
     yellow_card: -1
     red_card: -2
     own_goal: -2
     penalty_miss: -3
     15_min_no_goal: 1
     30_min_no_goal: 2
+    45_min_no_goal: 3
     90_min_no_goal: 6
 
 POSITION_DICT:

@@ -279,15 +279,19 @@ class MatchDay:
                 if goals_conceded == 0:
                     minutes = player._data['duration']
                     event = {  # dummy event dict
-                        "id": 1,
-                        "minute": minutes
+                        "id": str(minute) + str(minutes),
+                        "minute": minute,
                     }
-                    if minutes == 15:
-                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["15_min_no_goal"])
-                    elif minutes == 30:
-                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["30_min_no_goal"])
-                    elif minutes == 90:
-                        self.update_user_teams(event, player._data['player_id'], {"desc": str(minute) + "_minute_no_concede"}, POINTS_DICT["90_min_no_goal"])
+                    event_dict = {
+                        "id": str(minute) + str(minutes),
+                        "minute": minute,
+                        "desc": str(minutes) + "_minute_no_concede",
+                        "points": POINTS_DICT[str(minutes) + "_min_no_goal"]
+                    }
+                    self.update_user_teams(event,
+                                           player._data['player_id'],
+                                           event_dict,
+                                           POINTS_DICT[str(minutes) + "_min_no_goal"])
                 # elif goals_conceded >= 2:
                 #     self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "more_than_one_goal_conceded"}, POINTS_DICT["90_min_no_goal"])
 
@@ -380,7 +384,7 @@ if __name__ == '__main__':
             md.check_for_expiry(150)
     except Exception as e:
         logging.error(traceback.format_exc())
-        send_error_mail(constants.NOTIF_MAIL, traceback.format_exc())
+        send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
 
 
 
