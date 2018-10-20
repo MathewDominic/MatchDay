@@ -155,6 +155,8 @@ class MatchDay:
                                     # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
                                     .get())
         for team in user_teams_to_update:
+            if 'minuteOfExpiry' not in team._data:
+                continue
             if team._data['minuteOfBuy'] <= int(event["minute"]) <= team._data['minuteOfExpiry']:
                 doc = team._reference
                 self.db.document('userTeams/' + doc._path[1] + '/events/' + str(event["id"])).set(event_dict)
@@ -162,14 +164,25 @@ class MatchDay:
                 self.update_leaderboard(team._data['userId'], points)
 
     def update_leaderboard(self, user_id, points):
-        try:
-            leaderboard_data = self.db.document('leaderboard/' + str(self.match_id)).get()._data
-            if user_id in leaderboard_data:
-                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: leaderboard_data[str(user_id)] + points})
-            else:
-                self.db.document('leaderboard/' + str(self.match_id)).update({user_id: points})
-        except:
-            self.db.document('leaderboard/' + str(self.match_id)).set({user_id: points})
+        leaderboard_entry = list(self.db.collection('leaderboard').where(u'user_id', u'==', unicode(user_id))
+                                                  .where(u'match_id', u'==', unicode(self.match_id))
+                                                  .get())
+        if len(leaderboard_entry) > 0:
+            self.db.document('leaderboard/' + str(user_id) + '_' + str(self.match_id))\
+                .update({"points": leaderboard_entry[0]._data['points'] + points})
+        else:
+            user_name = "null"
+            user = list(self.db.collection('users').where(u'id', u'==', unicode(user_id)).get())
+            if len(user) > 0:
+                if user[0]._data['id'] is not None:
+                    user_name = user[0]._data['name']
+            leaderboard_obj = {
+                "match_id": unicode(self.match_id),
+                "user_id": unicode(user_id),
+                "user_name": unicode(user_name),
+                "points": points
+            }
+            self.db.document('leaderboard/' + str(user_id) + "_" + str(self.match_id)).set(leaderboard_obj)
 
     def get_comments(self, last_comment_minute, data):
         comments = data["comments"]["data"]
@@ -259,7 +272,7 @@ class MatchDay:
 
     def check_for_expiry(self, minute):
         players_expired = list((self.db.collection('userTeams')
-                                     # .where(u'minuteOfExpiry', u'<=', int(minute))
+                                     # .where(u'minuteOfExpiry', u'<', int(minute) - 2)
                                      .where(u'matchId', u'==', int(self.match_id))
                                      .where(u'active', u'==', True))
                                     # .where(u'minuteOfExpiry', u'<=', int(event["minute"] + 30))
@@ -279,21 +292,22 @@ class MatchDay:
                     if player._data['minuteOfBuy'] <= minute <= player._data['minuteOfExpiry']:
                         goals_conceded = goals_conceded + 1
                 if goals_conceded == 0:
-                    minutes = player._data['duration']
+                    duration = int(player._data['duration'])
                     event = {  # dummy event dict
-                        "id": str(minute) + str(minutes),
-                        "minute": minute,
+                        "id": str(minute) + str(duration),
+                        "minute": player._data['minuteOfExpiry'],
                     }
                     event_dict = {
-                        "id": str(minute) + str(minutes),
+                        "id": unicode(str(minute) + str(duration)),
                         "minute": minute,
-                        "desc": str(minutes) + "_minute_no_concede",
-                        "points": POINTS_DICT[str(minutes) + "_min_no_goal"]
+                        "desc": unicode(str(duration) + "_minute_no_concede"),
+                        "points": POINTS_DICT[str(duration) + "_min_no_goal"]
                     }
-                    self.update_user_teams(event,
-                                           player._data['player_id'],
-                                           event_dict,
-                                           POINTS_DICT[str(minutes) + "_min_no_goal"])
+                    self.db.document('userTeams/' + str(player.id) + '/events/' + str(event["id"])).set(event_dict)
+                    self.db.document('userTeams/' + str(player.id)).update({'points': player._data['points'] + event_dict["points"]})
+                    self.update_leaderboard(str(player._data['userId']), event_dict["points"])
+
+
                 # elif goals_conceded >= 2:
                 #     self.update_user_teams(player._data['player_id'], {"desc": str(minute) + "more_than_one_goal_conceded"}, POINTS_DICT["90_min_no_goal"])
 
