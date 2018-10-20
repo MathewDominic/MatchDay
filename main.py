@@ -266,6 +266,8 @@ class MatchDay:
                                     # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
                                     .get())
         for player in players_expired:
+            if 'minuteOfExpiry' not in player._data:
+                continue
             if (player._data['minuteOfExpiry'] + 2) < minute:
                 doc = player._reference
                 self.db.document('userTeams/' + doc._path[1]).update({'active':False})
