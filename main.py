@@ -25,7 +25,6 @@ class MatchDay:
         firebase_admin.initialize_app(cred)
         self.db = firestore.Client()
         self.match_doc_ref= self.db.document('matches/' + match_id)
-        self.match_doc_ref.update({"current_minute": 0, "current_second": 0})
         self.id_to_player_dict = {}
         self.player_stats = {}
         self.player_points = {}
@@ -105,12 +104,13 @@ class MatchDay:
         return active_players
 
     def get_points_for_goal(self, position):
-        if position == 'F':
-            return POINTS_DICT["striker_score"]
-        elif position == 'M':
-            return POINTS_DICT["midfielder_score"]
-        else:
-            return POINTS_DICT["defender_score"]
+        # if position == 'F':
+        #     return POINTS_DICT["striker_score"]
+        # elif position == 'M':
+        #     return POINTS_DICT["midfielder_score"]
+        # else:
+        #     return POINTS_DICT["defender_score"]
+        return POINTS_DICT["score"]
 
     def process_point(self, player_id, event_desc, event, points):
         if player_id is not None:
@@ -279,12 +279,13 @@ class MatchDay:
                                     # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
                                     .get())
         for player in players_expired:
+            player_position = player._data['player_position']
             if 'minuteOfExpiry' not in player._data:
                 continue
             if (player._data['minuteOfExpiry'] + 2) < minute:
                 doc = player._reference
                 self.db.document('userTeams/' + doc._path[1]).update({'active':False})
-                if player._data['player_position'] != 'Defender':
+                if player_position == 'Attacker':
                     continue
                 concede_minutes = md.local_concede_minutes if player._data['is_local_team_player'] is True else md.visitor_concede_minutes
                 goals_conceded = 0
@@ -301,7 +302,7 @@ class MatchDay:
                         "id": unicode(str(minute) + str(duration)),
                         "minute": minute,
                         "desc": unicode(str(duration) + "_minute_no_concede"),
-                        "points": POINTS_DICT[str(duration) + "_min_no_goal"]
+                        "points": POINTS_DICT[player_position][str(int(duration)) + "_min_no_goal"]
                     }
                     self.db.document('userTeams/' + str(player.id) + '/events/' + str(event["id"])).set(event_dict)
                     self.db.document('userTeams/' + str(player.id)).update({'points': player._data['points'] + event_dict["points"]})

@@ -1,5 +1,5 @@
 ROOT_PATH: /root/MatchDay/
-SPORTSMONK_API_KEY : ts9Q6zWpuGTnDklmDLznQhYOfOSAEq3OhzWGefrlnqnldIw2NzwyzFMocvAY
+SPORTSMONK_API_KEY : jqB8hwyq6WS5jkNhzY2cafXwMC9HSD4OiOAScyNWoXaQjpKtJAvaQ6yeCz1P
 NOTIF_MAIL:
   - mathew.puthur@gmail.com
 LEAGUES:
@@ -16,18 +16,27 @@ EVENTS:
     own goal: own-goal
 
 POINTS_DICT:
-    striker_score: 4
-    defender_score: 6
-    midfielder_score: 5
-    assist: 3
+    score: 12
+    assist: 6
     yellow_card: -1
     red_card: -2
     own_goal: -2
     penalty_miss: -3
-    15_min_no_goal: 1
-    30_min_no_goal: 2
-    45_min_no_goal: 3
-    90_min_no_goal: 6
+    Goalkeeper:
+        15_min_no_goal: 2
+        30_min_no_goal: 4
+        45_min_no_goal: 6
+        90_min_no_goal: 12
+    Defender:
+        15_min_no_goal: 2
+        30_min_no_goal: 4
+        45_min_no_goal: 6
+        90_min_no_goal: 12
+    Midfielder:
+        15_min_no_goal: 1
+        30_min_no_goal: 2
+        45_min_no_goal: 3
+        90_min_no_goal: 6
 
 POSITION_DICT:
     D: Defender
