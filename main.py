@@ -31,19 +31,25 @@ class MatchDay:
         self.current_minute = 0
         self.local_active_players, self.visitor_active_players = [], []
         self.local_concede_minutes, self.visitor_concede_minutes = [], []
-        match_url = "https://soccer.sportmonks.com/api/v2.0/fixtures/" + self.match_id + "?api_token=" + API_KEY + \
-                    "&include=localTeam,visitorTeam,substitutions,goals,cards,other,lineup,bench,stats,comments," \
-                    "highlights,events"
+        self.starting_xi = []
+        # loop to handle case when api is not returning all starting players on first call
+        while True:
+            match_url = "https://soccer.sportmonks.com/api/v2.0/fixtures/" + self.match_id + "?api_token=" + API_KEY + \
+                        "&include=localTeam,visitorTeam,substitutions,goals,cards,other,lineup,bench,stats,comments," \
+                        "highlights,events"
 
-        resp = requests.get(match_url)
-        data = json.loads(resp.text)["data"]
+            resp = requests.get(match_url)
+            data = json.loads(resp.text)["data"]
+            self.starting_xi = data["lineup"]["data"]
+            if len(self.starting_xi) == 22:
+                break
+            time.sleep(60)
 
         if data["time"]["status"] == "NS":
             self.match_doc_ref.update({"current_minute": 0, "current_second": 0})
 
         self.local_team_id = int(data["localTeam"]["data"]["id"])
         self.visitor_team_id = int(data["visitorTeam"]["data"]["id"])
-        self.starting_xi = data["lineup"]["data"]
         self.subs = data["bench"]["data"]
         self.all_events = data["events"]["data"]
         self.populate_starting_players()
@@ -75,7 +81,7 @@ class MatchDay:
                     player = random.choice(self.visitor_active_players)
                 if player not in players:
                     players.append(player)
-            logging.info(bot + str(players))
+            logging.info(str(self.match_id) + bot + str(players))
             for player in players:
                 user_team_obj = {
                     "active": True,
@@ -91,14 +97,14 @@ class MatchDay:
                 self.db.document('userTeams/' + bot + str(player)).set(user_team_obj)
 
     def process_substitution(self, event, active_players):
-        logging.info("subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
+        logging.info(str(self.match_id) + "subs" + ' ' + str(event["player_id"]) + ' ' + str(event["related_player_id"]))
         # remove subbed off def
         if event["related_player_id"] in active_players:
-            logging.info('remove' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
+            logging.info(str(self.match_id) + 'remove' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             active_players.remove(event["related_player_id"])
 
         # add subbed on def
-        logging.info('add' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+        logging.info(str(self.match_id) + 'add' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
         active_players.append(event["player_id"])
 
         return active_players
@@ -190,14 +196,14 @@ class MatchDay:
             return
         last_comment = comments[len(comments) - 1]
         if int(last_comment["minute"]) > int(last_comment_minute):
-            logging.info("comment" + ' ' + str(last_comment["minute"]) + ' ' + to_ascii(last_comment["comment"]))
+            logging.info(str(self.match_id) + "comment" + ' ' + str(last_comment["minute"]) + ' ' + to_ascii(last_comment["comment"]))
         last_comment_minute = last_comment["minute"]
         return last_comment_minute
 
     def check_for_event(self, events):
         for event in events:
             if len(self.all_events) == 0:
-                logging.info('New event')
+                logging.info(str(self.match_id) + 'New event')
                 self.process_event(event)
             else:
                 new_event = True
@@ -205,24 +211,24 @@ class MatchDay:
                     if event["id"] == old_event["id"]:
                         new_event = False
                         if event["minute"] != old_event["minute"]:
-                            logging.info('Event minute changed' + ' ' + str(event))
+                            logging.info(str(self.match_id) + 'Event minute changed' + ' ' + str(event))
                         if event["player_id"] != old_event["player_id"]:
-                            logging.info('Event player_id changed' + ' ' + str(event))
+                            logging.info(str(self.match_id) + 'Event player_id changed' + ' ' + str(event))
                             if event["type"] == "goal":
                                 position = self.id_to_player_dict[event['player_id']]['position']
                                 points = self.get_points_for_goal(position)
                                 self.process_point(event["player_id"], "goal", event, points)
                         if event["related_player_id"] != old_event["related_player_id"]:
-                            logging.info('Event related_player_id changed' + ' ' + str(event))
+                            logging.info(str(self.match_id) + 'Event related_player_id changed' + ' ' + str(event))
                             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
                 if new_event is True:
-                    logging.info('New event')
+                    logging.info(str(self.match_id) + 'New event')
                     self.process_event(event)
 
     def process_event(self, event):
-        logging.info("Event at minute" + ' ' + str(event.get("minute", -1)))
+        logging.info(str(self.match_id) + "Event at minute" + ' ' + str(event.get("minute", -1)))
         if event["type"] == EVENTS["goal"] or event["type"] == "penalty":
-            logging.info('Goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+            logging.info(str(self.match_id) + 'Goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
 
             if int(event["team_id"]) == self.local_team_id:
                 self.visitor_concede_minutes.append(int(event["minute"]))
@@ -237,18 +243,18 @@ class MatchDay:
             points = self.get_points_for_goal(position)
             self.process_point(event["player_id"], "goal", event, points)
 
-            logging.info('Assist ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
+            logging.info(str(self.match_id) + 'Assist ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["penalty miss"]:
-            logging.info('Penalty miss' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+            logging.info(str(self.match_id) + 'Penalty miss' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "penalty miss", event, POINTS_DICT['penalty_miss'])
 
         elif event["type"] == EVENTS["own goal"]:
-            logging.info('Own goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+            logging.info(str(self.match_id) + 'Own goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
 
-            logging.info('Assist' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
+            logging.info(str(self.match_id) + 'Assist' + ' ' + str(event["related_player_id"]) + ' ' + to_ascii(event["related_player_name"]))
             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
 
         elif event["type"] == EVENTS["substitution"]:
@@ -260,15 +266,15 @@ class MatchDay:
                 self.db.document('active_players/' + self.match_id).update({"visitorteam_active_players": self.visitor_active_players})
 
         elif event["type"] == EVENTS["yellow card"]:
-            logging.info('Yellow card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+            logging.info(str(self.match_id) + 'Yellow card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "yellow card", event, POINTS_DICT['yellow_card'])
 
         elif event["type"] == EVENTS["red card"]:
-            logging.info('Red card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+            logging.info(str(self.match_id) + 'Red card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
             self.process_point(event["player_id"], "red card", event, POINTS_DICT['red_card'])
 
         else:
-            logging.info("no event in dict" + ' ' + str(event["type"]))
+            logging.info(str(self.match_id) + "no event in dict" + ' ' + str(event["type"]))
 
     def check_for_expiry(self, minute):
         players_expired = list((self.db.collection('userTeams')
@@ -367,14 +373,12 @@ if __name__ == '__main__':
                 if time_obj.get("status") != 'LIVE' and time_obj.get("status") != 'ET':
                     if time_obj.get("status") == 'FT':
                         md.check_for_expiry(150)
-                        logging.info('Game over')
+                        logging.info(str(match_id) + 'Game over')
                         break
-                    logging.info('not live, sleep for 60')
+                    logging.info(str(match_id) + 'not live, sleep for 60')
                     time.sleep(60)
                     continue
                 else:
-                    # logging.info('sleep for 10')
-                    # logging.info("current time", str(time_obj.get("minute")) + ":" +  str(time_obj.get("second")))
                     time_obj = data["time"]
                     if time_obj["minute"] > current_minute:
                         md.check_for_expiry(time_obj["minute"])
@@ -400,7 +404,7 @@ if __name__ == '__main__':
                 md.process_event(event)
             md.check_for_expiry(150)
     except Exception as e:
-        logging.error(traceback.format_exc())
+        logging.info(str(match_id) + traceback.format_exc())
         send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
 
 
