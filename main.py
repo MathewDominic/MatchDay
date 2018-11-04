@@ -214,10 +214,14 @@ class MatchDay:
                             logging.info(str(self.match_id) + 'Event minute changed' + ' ' + str(event))
                         if event["player_id"] != old_event["player_id"]:
                             logging.info(str(self.match_id) + 'Event player_id changed' + ' ' + str(event))
-                            if event["type"] == "goal":
+                            if event["type"] == EVENTS["goal"]:
+                                logging.info(str(self.match_id) + 'Goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
                                 position = self.id_to_player_dict[event['player_id']]['position']
                                 points = self.get_points_for_goal(position)
                                 self.process_point(event["player_id"], "goal", event, points)
+                            elif event["type"] == EVENTS["own goal"]:
+                                logging.info(str(self.match_id) + 'Own goal' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
+                                self.process_point(event["player_id"], "own goal", event, POINTS_DICT['own_goal'])
                         if event["related_player_id"] != old_event["related_player_id"]:
                             logging.info(str(self.match_id) + 'Event related_player_id changed' + ' ' + str(event))
                             self.process_point(event["related_player_id"], "assist", event, POINTS_DICT["assist"])
@@ -295,8 +299,8 @@ class MatchDay:
                     continue
                 concede_minutes = md.local_concede_minutes if player._data['is_local_team_player'] is True else md.visitor_concede_minutes
                 goals_conceded = 0
-                for minute in concede_minutes:
-                    if player._data['minuteOfBuy'] <= minute <= player._data['minuteOfExpiry']:
+                for concede_minute in concede_minutes:
+                    if player._data['minuteOfBuy'] <= concede_minute <= player._data['minuteOfExpiry']:
                         goals_conceded = goals_conceded + 1
                 if goals_conceded == 0:
                     duration = int(player._data['duration'])
@@ -372,7 +376,7 @@ if __name__ == '__main__':
                 events = data["events"]["data"]
                 if time_obj.get("status") != 'LIVE' and time_obj.get("status") != 'ET':
                     if time_obj.get("status") == 'FT':
-                        md.check_for_expiry(150)
+                        md.check_for_expiry(250)
                         logging.info(str(match_id) + 'Game over')
                         break
                     logging.info(str(match_id) + 'not live, sleep for 60')
@@ -402,7 +406,7 @@ if __name__ == '__main__':
                 md.current_minute = event["minute"]
                 md.match_doc_ref.update({"current_minute": md.current_minute, "current_second": 0})
                 md.process_event(event)
-            md.check_for_expiry(150)
+            md.check_for_expiry(250)
     except Exception as e:
         logging.info(str(match_id) + traceback.format_exc())
         send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
