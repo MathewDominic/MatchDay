@@ -302,21 +302,41 @@ class MatchDay:
                 for concede_minute in concede_minutes:
                     if player._data['minuteOfBuy'] <= concede_minute <= player._data['minuteOfExpiry']:
                         goals_conceded = goals_conceded + 1
+                # if goals_conceded == 0:
+                #     duration = int(player._data['duration'])
+                #     event = {  # dummy event dict
+                #         "id": str(minute) + str(duration),
+                #         "minute": player._data['minuteOfExpiry'],
+                #     }
+                #     event_dict = {
+                #         "id": unicode(str(minute) + str(duration)),
+                #         "minute": minute,
+                #         "desc": unicode(str(duration) + "_minute_no_concede"),
+                #         "points": POINTS_DICT[player_position][str(int(duration)) + "_min_no_goal"]
+                #     }
+                #     self.db.document('userTeams/' + str(player.id) + '/events/' + str(event["id"])).set(event_dict)
+                #     self.db.document('userTeams/' + str(player.id)).update({'points': player._data['points'] + event_dict["points"]})
+                #     self.update_leaderboard(str(player._data['userId']), event_dict["points"])
+
+                duration = int(player._data['duration'])
+                event = {  # dummy event dict
+                    "id": str(minute) + str(duration),
+                    "minute": player._data['minuteOfExpiry'],
+                }
+                event_dict = {
+                    "id": unicode(str(minute) + str(duration)),
+                    "minute": minute,
+                }
                 if goals_conceded == 0:
-                    duration = int(player._data['duration'])
-                    event = {  # dummy event dict
-                        "id": str(minute) + str(duration),
-                        "minute": player._data['minuteOfExpiry'],
-                    }
-                    event_dict = {
-                        "id": unicode(str(minute) + str(duration)),
-                        "minute": minute,
-                        "desc": unicode(str(duration) + "_minute_no_concede"),
-                        "points": POINTS_DICT[player_position][str(int(duration)) + "_min_no_goal"]
-                    }
-                    self.db.document('userTeams/' + str(player.id) + '/events/' + str(event["id"])).set(event_dict)
-                    self.db.document('userTeams/' + str(player.id)).update({'points': player._data['points'] + event_dict["points"]})
-                    self.update_leaderboard(str(player._data['userId']), event_dict["points"])
+                    event_dict["desc"] = unicode(str(duration) + "_minute_no_concede")
+                    event_dict["points"] = POINTS_DICT[player_position][str(int(duration)) + "_min_no_goal"]
+                else:
+                    event_dict["desc"] = unicode(str(duration) + "_minute_" + str(goals_conceded) + "_concede")
+                    event_dict["points"] = goals_conceded * POINTS_DICT[player_position]["concede_goal"]
+                self.db.document('userTeams/' + str(player.id) + '/events/' + str(event["id"])).set(event_dict)
+                self.db.document('userTeams/' + str(player.id)).update(
+                    {'points': player._data['points'] + event_dict["points"]})
+                self.update_leaderboard(str(player._data['userId']), event_dict["points"])
 
 
                 # elif goals_conceded >= 2:
