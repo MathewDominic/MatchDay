@@ -16,27 +16,27 @@ EVENTS:
     own goal: own-goal
 
 POINTS_DICT:
-    score: 12
-    assist: 6
+    score: 8
+    assist: 4
     yellow_card: -1
     red_card: -2
     own_goal: -2
-    penalty_miss: -3
+    penalty_miss: -4
     Goalkeeper:
         15_min_no_goal: 2
         30_min_no_goal: 4
-        45_min_no_goal: 6
-        90_min_no_goal: 12
+        60_min_no_goal: 8
+        concede_goal: -2
     Defender:
         15_min_no_goal: 2
         30_min_no_goal: 4
-        45_min_no_goal: 6
-        90_min_no_goal: 12
+        60_min_no_goal: 8
+        concede_goal: -2
     Midfielder:
         15_min_no_goal: 1
         30_min_no_goal: 2
-        45_min_no_goal: 3
-        90_min_no_goal: 6
+        60_min_no_goal: 4
+        concede_goal: -1
 
 POSITION_DICT:
     D: Defender
