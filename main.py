@@ -85,7 +85,7 @@ class MatchDay:
             for player in players:
                 user_team_obj = {
                     "active": True,
-                    "duration": 90,
+                    "duration": 60,
                     "isLocal": True,
                     "matchId": int(self.match_id),
                     "player_id": player,
