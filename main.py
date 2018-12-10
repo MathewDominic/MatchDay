@@ -11,6 +11,7 @@ import random
 from firebase_admin import firestore,credentials
 from utils import init_logging, to_ascii, send_error_mail
 from config import constants
+from graphql_helper import GraphQLHelper
 
 API_KEY = constants['SPORTSMONK_API_KEY']
 EVENTS = constants['EVENTS']
@@ -24,6 +25,7 @@ class MatchDay:
         cred = credentials.Certificate(os.path.expanduser('~/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json'))
         firebase_admin.initialize_app(cred)
         self.db = firestore.Client()
+        self.graphql_helper = GraphQLHelper()
         self.match_doc_ref= self.db.document('matches/' + match_id)
         self.id_to_player_dict = {}
         self.player_stats = {}
@@ -57,14 +59,23 @@ class MatchDay:
         self.add_bots()
 
     def populate_starting_players(self):
+        player_lineup = []
         for player in self.starting_xi:
             self.id_to_player_dict[player["player_id"]] = {"name": player["player_name"], "position" : player["position"]}
             team_id = int(player["team_id"])
+            player_lineup_obj = {
+                "player_id": player['player_id'],
+                "fixture_id": int(self.match_id),
+                "status": "active",
+                "team_id": team_id
+            }
+            player_lineup.append(player_lineup_obj)
+
             if team_id == int(self.local_team_id):
                 self.local_active_players.append(player['player_id'])
             else:
                 self.visitor_active_players.append(player['player_id'])
-        self.db.document('active_players/' + self.match_id).set({"localteam_active_players": self.local_active_players, "visitorteam_active_players": self.visitor_active_players})
+        self.graphql_helper.upsert("lineups", "player_id", player_lineup)
 
     def populate_bench_players(self):
         for player in self.subs:
