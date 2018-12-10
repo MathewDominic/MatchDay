@@ -3,30 +3,28 @@ import json
 import subprocess
 import requests
 import logging
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
 from config import constants
-from utils import init_logging
+from utils import init_logging, send_error_mail
 
 API_KEY = constants['SPORTSMONK_API_KEY']
-cred = credentials.Certificate(os.path.expanduser('~/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json'))
-firebase_admin.initialize_app(cred)
-db = firestore.Client()
+from graphql_helper import GraphQLHelper
 
 
 
 if __name__ == '__main__':
+    graphql_helper = GraphQLHelper()
     init_logging(logging.INFO, filename=os.path.expanduser('~/logs/start_match.log'))
     url = "https://soccer.sportmonks.com/api/v2.0/livescores/now?api_token=" + API_KEY + "&include=localTeam,visitorTeam"
     resp = requests.get(url)
     matches = json.loads(resp.text)["data"]
     for match in matches:
         if match['league_id'] in constants['LEAGUES']:
-            match_doc = db.document('matches/' + str(match['id'])).get()
-            if match_doc._data['started'] is False:
-                db.document('matches/' + str(match['id'])).update({"started":True})
+            match = graphql_helper.select("fixtures", "{id: {_eq: " + str(match['id']) + "}}", "{}", "id,has_started")
+            if len(match['data']['fixtures']) == 0:
+                send_error_mail(constants['NOTIF_MAIL'], "No match")
+            elif match['data']['fixtures'][0]['has_started'] is False:
+                graphql_helper.update("fixtures", "{id: {_eq: " + str(match['id']) + "}}", "{has_started: true}", "id")
                 logging.info('Starting match ' + str(match['id']) + ' ' + str(match['localTeam']['data']['name'])
                              + ' v ' + match['visitorTeam']['data']['name'])
-                cmd = "python {PATH}main.py {MATCH_ID} live".format(PATH=constants['ROOT_PATH'], MATCH_ID=match['id'])
+                cmd = "python {PATH} {MATCH_ID} live".format(PATH=os.path.join(os.getcwdu(), "main.py"), MATCH_ID=match['id'])
                 subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
