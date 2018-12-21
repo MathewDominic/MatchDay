@@ -19,11 +19,17 @@ if __name__ == '__main__':
     matches = json.loads(resp.text)["data"]
     for match in matches:
         if match['league_id'] in constants['LEAGUES']:
-            match = graphql_helper.select("fixtures", "{id: {_eq: " + str(match['id']) + "}}", "{}", "id,has_started")
+            match = graphql_helper.select("fixtures",
+                                          "{id: {_eq: " + str(match['id']) + "}}",
+                                          "{}",
+                                          "id,has_started")
             if len(match['data']['fixtures']) == 0:
                 send_error_mail(constants['NOTIF_MAIL'], "No match")
             elif match['data']['fixtures'][0]['has_started'] is False:
-                graphql_helper.update("fixtures", "{id: {_eq: " + str(match['id']) + "}}", "{has_started: true}", "id")
+                graphql_helper.update("fixtures",
+                                      "{id: {_eq: " + str(match['id']) + "}}",
+                                      "{has_started: true}",
+                                      "id")
                 logging.info('Starting match ' + str(match['id']) + ' ' + str(match['localTeam']['data']['name'])
                              + ' v ' + match['visitorTeam']['data']['name'])
                 cmd = "python {PATH} {MATCH_ID} live".format(PATH=os.path.join(os.getcwdu(), "main.py"), MATCH_ID=match['id'])

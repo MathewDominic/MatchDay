@@ -10,7 +10,7 @@ class GraphQLHelper:
         self.client = GraphQLClient(constants["GRAHQL_CLIENT_URL"])
         self.client.inject_token(constants["GRAPHQL_TOKEN"], 'X-Hasura-Access-Key')
 
-    def upsert(self, table, return_column, data):
+    def upsert(self, table, data, return_column):
         query = '''
         mutation upsert_{TABLE_NAME}($objects: [{TABLE_NAME}_insert_input!]! ) {{
           insert_{TABLE_NAME}(objects: $objects,

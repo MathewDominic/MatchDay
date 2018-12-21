@@ -38,7 +38,7 @@ if __name__ == '__main__':
                     "stadium": match["venue"]["data"]["name"],
                 }
                 objects.append(obj)
-        graphql_helper.upsert("fixtures", "id", objects)
+        graphql_helper.upsert("fixtures", objects, "id")
     except Exception as e:
         logging.info(traceback.format_exc())
         send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
