@@ -38,6 +38,7 @@ if __name__ == '__main__':
                     "stadium": match["venue"]["data"]["name"],
                 }
                 objects.append(obj)
+                logging.info(str(match["id"]) + " : " + match['localTeam']['data']['name'] + " v " + match['visitorTeam']['data']['name'])
         graphql_helper.upsert("fixtures", objects, "id")
     except Exception as e:
         logging.info(traceback.format_exc())
