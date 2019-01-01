@@ -4,11 +4,9 @@ import logging
 import json
 import time
 import requests
-import firebase_admin
 import traceback
 import random
 
-from firebase_admin import firestore,credentials
 from utils import init_logging, to_ascii, send_error_mail
 from config import constants
 from graphql_helper import GraphQLHelper
@@ -22,11 +20,7 @@ POSITION_DICT = constants['POSITION_DICT']
 class MatchDay:
     def __init__(self, match_id):
         self.match_id = match_id
-        cred = credentials.Certificate(os.path.expanduser('~/matchday-firebase-firebase-adminsdk-83hhc-40b0ae1594.json'))
-        firebase_admin.initialize_app(cred)
-        self.db = firestore.Client()
         self.graphql_helper = GraphQLHelper()
-        self.match_doc_ref= self.db.document('matches/' + match_id)
         self.id_to_player_dict = {}
         self.player_stats = {}
         self.player_points = {}
@@ -47,7 +41,7 @@ class MatchDay:
                 break
             time.sleep(60)
 
-        # self.init_match_details()
+        self.init_match_details()
         self.local_team_id = int(data["localTeam"]["data"]["id"])
         self.visitor_team_id = int(data["visitorTeam"]["data"]["id"])
         self.subs = data["bench"]["data"]
@@ -57,10 +51,10 @@ class MatchDay:
         self.add_bots()
 
     def init_match_details(self):
-        self.graphql_helper.update("fixtures",
-                                 "{id: {_eq: " + str(match_id) + "}}",
-                                 "{current_minute: 0,current_second: 0, local_concede_minutes:[], visitor_concede_minutes: []}",
-                                 "id")
+        self.graphql_helper.update(table="fixtures",
+                                 equals_obj="{id: {_eq: " + str(match_id) + "}}",
+                                 set_obj="{current_minute: 0,current_second: 0}",
+                                 return_column="id")
     def populate_starting_players(self):
         player_lineup = []
         for player in self.starting_xi:
@@ -157,30 +151,19 @@ class MatchDay:
             self.graphql_helper.upsert("events", [event_dict], "id")
             self.update_user_teams(event_dict)
 
-    def update_user_teams(self, point_obj):
+    def update_user_teams(self, event_dict):
         pass
-        # self.graphql_helper.upsert("user_teams",[point_obj], "id")
-
-    def update_leaderboard(self, user_id, points):
-        leaderboard_entry = list(self.db.collection('leaderboard').where(u'user_id', u'==', unicode(user_id))
-                                                  .where(u'match_id', u'==', unicode(self.match_id))
-                                                  .get())
-        if len(leaderboard_entry) > 0:
-            self.db.document('leaderboard/' + str(user_id) + '_' + str(self.match_id))\
-                .update({"points": leaderboard_entry[0]._data['points'] + points})
-        else:
-            user_name = "null"
-            user = list(self.db.collection('users').where(u'id', u'==', unicode(user_id)).get())
-            if len(user) > 0:
-                if user[0]._data['id'] is not None:
-                    user_name = user[0]._data['name']
-            leaderboard_obj = {
-                "match_id": unicode(self.match_id),
-                "user_id": unicode(user_id),
-                "user_name": unicode(user_name),
-                "points": points
-            }
-            self.db.document('leaderboard/' + str(user_id) + "_" + str(self.match_id)).set(leaderboard_obj)
+        update_condition = "{" \
+                                "fixture_id: {_eq: " + self.match_id + "}," + \
+                                "player_id: {_eq: " + str(event_dict['player_id']) + "}," + \
+                                "minute_of_buy: {_lte: " + str(int(event_dict['minute'])) + "}," \
+                                "minute_of_expiry: {_gte: " + str(int(event_dict['minute'])) + "}" \
+                            "}"
+        user_teams_updated = self.graphql_helper.update(table="user_teams",
+                                                        equals_obj=update_condition,
+                                                        inc_obj="{points: " + str(event_dict['points']) + "}",
+                                                        return_column="id")
+        pass
 
     def get_comments(self, last_comment_minute, data):
         comments = data["comments"]["data"]
@@ -266,13 +249,13 @@ class MatchDay:
 
             update_condition = "{" \
                                     "fixture_id: {_eq: " + self.match_id + "}," + \
-                                    "player_id: {_eq: " + str(event['player_id']) + "}," + \
+                                    "player_id: {_eq: " + str(event['related_player_id']) + "}," + \
                                     "team_id: {_eq: " + str(event['team_id']) + "}" \
                                 "}"
-            self.graphql_helper.update("lineups",
-                                       update_condition,
-                                       "{status: inactive}",
-                                       "id")
+            self.graphql_helper.update(table="lineups",
+                                       equals_obj=update_condition,
+                                       set_obj='{status: "inactive"}',
+                                       return_column="player_id")
 
         elif event["type"] == EVENTS["yellow card"]:
             logging.info(str(self.match_id) + 'Yellow card' + ' ' + str(event["player_id"]) + ' ' + to_ascii(event["player_name"]))
@@ -286,44 +269,34 @@ class MatchDay:
             logging.info(str(self.match_id) + "no event in dict" + ' ' + str(event["type"]))
 
     def check_for_expiry(self, minute):
-        # players_expired = list((self.db.collection('userTeams')
-        #                              # .where(u'minuteOfExpiry', u'<', int(minute) - 2)
-        #                              .where(u'matchId', u'==', int(self.match_id))
-        #                              .where(u'active', u'==', True))
-        #                             # .where(u'minuteOfExpiry', u'<=', int(event["minute"] + 30))
-        #                             # .where(u'minuteOfExpiry', u'>=', int(event["minute"])))
-        #                             .get())
         update_condition =  "{" \
                                 "fixture_id: {_eq: " + self.match_id  + "}," + \
                                 "active: {_eq: true},"  + \
                                 "minute_of_expiry: {_lte: "  + str(int(minute - 2)) + "}" \
                             "}"
-        players_expired = self.graphql_helper.update("user_teams",
-                                                     update_condition,
-                                                     "{active: false}",
-                                                     "id, player_position, minute_of_buy, minute_of_expiry, duration")
-        for player in json.loads(players_expired)['data']['update_user_teams']['returning']:
-            # player_position = player._data['player_position']
-            # if 'minuteOfExpiry' not in player._data:
-            #     continue
-            # if (player._data['minuteOfExpiry'] + 2) < minute:
-            #     doc = player._reference
-                # self.db.document('userTeams/' + doc._path[1]).update({'active':False})
-            player_position = "Attacker"
+        players_expired = self.graphql_helper.update(table="user_teams",
+                                                     equals_obj=update_condition,
+                                                     set_obj="{active: false}",
+                                                     return_column="id, player_position, minute_of_buy, minute_of_expiry, duration, is_local_team")
+        for player in players_expired:
+            player_position = player['player_position']
             if player_position == 'Attacker':
                 continue
-            concede_minutes = md.local_concede_minutes if player._data[
-                                                              'is_local_team_player'] is True else md.visitor_concede_minutes
+            concede_minutes = md.local_concede_minutes if player['is_local_team'] is True else md.visitor_concede_minutes
             goals_conceded = 0
             for concede_minute in concede_minutes:
                 if player['minute_of_buy'] <= concede_minute <= player['minute_of_expiry']:
-                    goals_conceded = goals_conceded + 1
+                    goals_conceded = 1
+                    break
             if goals_conceded == 0:
-                duration = int(player['duration'])
-                no_goal_points = POINTS_DICT[player_position][str(int(duration)) + "_min_no_goal"]
-
-
-
+                no_goal_points = POINTS_DICT[player_position][str(player['duration']) + "_min_no_goal"]
+                update_condition = "{" \
+                                        "id: {_eq: " + str(player['id']) + "}" + \
+                                    "}"
+                user_teams_updated = self.graphql_helper.update(table="user_teams",
+                                                                equals_obj=update_condition,
+                                                                inc_obj="{points: " + str(no_goal_points) + "}",
+                                                                return_column="id")
 
 
 if __name__ == '__main__':
@@ -333,7 +306,6 @@ if __name__ == '__main__':
         md = MatchDay(match_id)
         live_match_update = True if sys.argv[2] == "live" else False
         current_minute = 0
-        # md.check_for_expiry(100)
         if live_match_update:
             while True:
                 match_url = "https://soccer.sportmonks.com/api/v2.0/fixtures/" + match_id + "?api_token=" + API_KEY + \
@@ -350,6 +322,10 @@ if __name__ == '__main__':
                     if time_obj.get("status") == 'FT':
                         md.check_for_expiry(250)
                         logging.info(str(match_id) + 'Game over')
+                        md.graphql_helper.update(table="fixtures",
+                                                 equals_obj="{id: {_eq: " + str(match_id) + "}}",
+                                                 set_obj="{has_ended: true}",
+                                                 return_column="id")
                         break
                     logging.info(str(match_id) + 'not live, sleep for 60')
                     time.sleep(60)
@@ -360,11 +336,10 @@ if __name__ == '__main__':
                         md.check_for_expiry(time_obj["minute"])
                     current_minute = time_obj["minute"]
                     md.check_for_event(events)
-                    # md.match_doc_ref.update({"current_minute": time_obj["minute"], "current_second": time_obj["second"]})
-                    md.graphql_helper.update("fixtures",
-                                             "{id: {_eq: " + str(match_id) + "}}",
-                                             "{current_minute: " + time_obj["minute"] + ",current_second" + time_obj["second"] + "}",
-                                             "id")
+                    md.graphql_helper.update(table="fixtures",
+                                             equals_obj="{id: {_eq: " + str(match_id) + "}}",
+                                             set_obj="{current_minute: " + time_obj["minute"] + ",current_second" + time_obj["second"] + "}",
+                                             return_column="id")
                     time.sleep(10)
                     md.all_events = events
                     continue
@@ -380,10 +355,10 @@ if __name__ == '__main__':
                 if event["minute"] > md.current_minute:
                     md.check_for_expiry(event["minute"])
                 md.current_minute = event["minute"]
-                md.graphql_helper.update("fixtures",
-                                         "{id: {_eq: " + str(match_id) + "}}",
-                                         "{current_minute: " + str(md.current_minute) + ",current_second:" + str(0) + "}",
-                                         "id")
+                md.graphql_helper.update(table="fixtures",
+                                         equals_obj="{id: {_eq: " + str(match_id) + "}}",
+                                         set_obj="{current_minute: " + str(md.current_minute) + ",current_second:" + str(0) + "}",
+                                         return_column="id")
                 md.process_event(event)
             md.check_for_expiry(250)
     except Exception as e:

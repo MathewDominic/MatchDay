@@ -30,13 +30,15 @@ class GraphQLHelper:
             return self.client.execute(query, {"objects": data})
         except Exception as e:
             logging.info(traceback.format_exc())
+            raise e
 
-    def update(self, table, equals_obj, set_obj, return_column):
+    def update(self, table, equals_obj="{}", set_obj="{}", inc_obj="{}", return_column="{}"):
         query = '''
             mutation update_{TABLE_NAME} {{
                 update_{TABLE_NAME}(
                     where: {EQUALS_OBJ},
                     _set: {SET_OBJ}
+                    _inc: {INC_OBJ}
                 )   {{
                     affected_rows
                     returning {{
@@ -45,11 +47,12 @@ class GraphQLHelper:
                 }}
             }}
         '''
-        query = query.format(TABLE_NAME=table, EQUALS_OBJ=equals_obj, SET_OBJ=set_obj, RETURN_COLUMN=return_column)
+        query = query.format(TABLE_NAME=table, EQUALS_OBJ=equals_obj, SET_OBJ=set_obj, INC_OBJ= inc_obj, RETURN_COLUMN=return_column)
         try:
-            return self.client.execute(query)
+            return json.loads(self.client.execute(query))['data']['update_' + table]['returning']
         except Exception as e:
             logging.info(traceback.format_exc())
+            raise e
 
     def select(self, table, where_obj, order_by_obj, return_column):
         query = '''
@@ -68,6 +71,7 @@ class GraphQLHelper:
             return json.loads(self.client.execute(query))
         except Exception as e:
             logging.info(traceback.format_exc())
+            raise e
 
 
 
