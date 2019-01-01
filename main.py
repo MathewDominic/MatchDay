@@ -338,7 +338,7 @@ if __name__ == '__main__':
                     md.check_for_event(events)
                     md.graphql_helper.update(table="fixtures",
                                              equals_obj="{id: {_eq: " + str(match_id) + "}}",
-                                             set_obj="{current_minute: " + time_obj["minute"] + ",current_second" + time_obj["second"] + "}",
+                                             set_obj="{current_minute: " + str(time_obj["minute"]) + ",current_second:" + str(time_obj["second"]) + "}",
                                              return_column="id")
                     time.sleep(10)
                     md.all_events = events
