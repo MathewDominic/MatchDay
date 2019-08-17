@@ -14,7 +14,7 @@ def init_logging(LOG_LEVEL, filename=None, logger_name=""):
 
     rootLogger = logging.getLogger(logger_name)
     rootLogger.setLevel(LOG_LEVEL)
-    print "init logging: level: %s, file: %s" % (logging.getLevelName(LOG_LEVEL), filename)
+    print(f"init logging: level: {logging.getLevelName(LOG_LEVEL)}, file: {filename}")
 
     if filename is not None:
         home_path = os.path.expanduser('~')
