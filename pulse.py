@@ -28,7 +28,7 @@ class Pulse:
         self.fixtures_resp = self.get_match_resp(self.fixture_url)
         self.starting_xi = self.get_lineups(is_starting=True, status='active')
         self.subs = self.get_lineups(is_starting=False, status='inactive')
-        # DbUtils.set_starting_lineup(self.starting_xi + self.subs)
+        DbUtils.set_starting_lineup(self.starting_xi + self.subs)
         self.events = self.get_all_events()
         for event in self.events:
             if event['type'] in self.point_events_dict.keys():
