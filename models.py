@@ -14,6 +14,7 @@ database = PostgresqlDatabase(
         "port": 5432
     })
 
+
 class BaseModel(Model):
     class Meta:
         database = database
@@ -80,7 +81,7 @@ class Event(BaseModel):
     points = IntegerField()
 
     class Meta:
-        table_name = 'events2'
+        table_name = 'events'
 
 
 
