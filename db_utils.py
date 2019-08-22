@@ -1,5 +1,5 @@
 from peewee import *
-from models import Lineup, Event, Fixture
+from models import Lineup, Event, Fixture, UserPick
 
 
 class DbUtils:
@@ -16,6 +16,15 @@ class DbUtils:
     @staticmethod
     def set_event(event_dict):
         Event.get_or_create(**event_dict)
+        UserPick.update(
+            points=UserPick.points + event_dict["points"]
+        ).where(
+            UserPick.fixture_id == event_dict["fixture_id"],
+            UserPick.player_id == event_dict["player_id"],
+            UserPick.minute_of_buy <= event_dict["minute"],
+            UserPick.minute_of_expiry >= event_dict["minute"]
+        ).execute()
+
 
     @staticmethod
     def set_substitution(in_player, out_player, fixture_id):

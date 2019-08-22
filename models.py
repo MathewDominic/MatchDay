@@ -84,6 +84,26 @@ class Event(BaseModel):
         table_name = 'events'
 
 
+class UserPick(BaseModel):
+    id = IntegerField()
+    user_id = IntegerField()
+    fixture_id = TextField()
+    player_id = TextField()
+    price = DecimalField()
+    minute_of_buy = IntegerField()
+    minute_of_expiry = IntegerField()
+    duration = IntegerField()
+    is_local_team = BooleanField()
+    is_active = BooleanField()
+    is_local = BooleanField()
+    points = IntegerField()
+    player_position = TextField()
+    created_at = DateTimeField()
+    updated_at = DateTimeField()
+
+    class Meta:
+        table_name = 'user_picks'
+
 
 
 
