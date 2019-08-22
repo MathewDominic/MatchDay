@@ -115,7 +115,10 @@ class Pulse:
         current_events_count = 0
         while True:
             resp = self.get_api_response_dict(self.events_url)
-            current_minute = resp['fixture']['clock']['label'].split("'")[0]
+            if " " in resp['fixture']['clock']['label']:  # eg 45 +2' - ignoring stoppage time
+                current_minute = resp['fixture']['clock']['label'].split(" ")[0]
+            else:  # eg 43'
+                current_minute = resp['fixture']['clock']['label'].split("'")[0]
             logging.info(f"{self.fixture_id}: Minute {current_minute}'")
             DbUtils.set_current_time(int(current_minute), self.id_append_constant + str(self.fixture_id))
             events = resp['events']['content']
