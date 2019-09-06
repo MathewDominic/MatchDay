@@ -14,7 +14,7 @@ GAME_START_STATUS = "L"
 
 
 class Pulse:
-    def __init__(self, fixture_id):
+    def __init__(self, fixture_id, game_status):
 
         self.fixture_id = fixture_id
         self.fixture_url = f"https://footballapi.pulselive.com/football/fixtures/{self.fixture_id}"
@@ -39,25 +39,28 @@ class Pulse:
 
         self.player_id_to_name_dict = {}
         self.localteam_player_ids, self.visitorteam_player_ids = [], []
-        self.localteam_gk_id, self.visitortem_gk_id = None, None
+        self.localteam_gk_id, self.visitorteam_gk_id = None, None
 
-        while True:
-            self.fixtures_resp = self.get_api_response_dict(self.fixture_url)
-            if self.fixtures_resp['status'] == GAME_START_STATUS:
-                DbUtils.set_game_started(self.id_append_constant + str(self.fixture_id))
-                break
-            else:
-                time.sleep(300)
-
+        self.fixtures_resp = self.get_api_response_dict(self.fixture_url)
         self.starting_xi = self.get_lineups(is_starting=True, status='active')
         self.subs = self.get_lineups(is_starting=False, status='inactive')
+        DbUtils.set_starting_lineup(self.starting_xi + self.subs)
 
-        # DbUtils.set_starting_lineup(self.starting_xi + self.subs)
-        self.check_for_events()
-        # self.events = self.get_api_response_dict(self.events_url)['events']['content']
-        # for event in self.events:
-        #     if event['type'] in self.point_events_dict.keys():
-        #         self.process_point_event(event, event["playerIds"])
+        if game_status == "live":
+            while True:
+                self.fixtures_resp = self.get_api_response_dict(self.fixture_url)
+                if self.fixtures_resp['status'] == GAME_START_STATUS:
+                    DbUtils.set_game_started(self.id_append_constant + str(self.fixture_id))
+                    break
+                else:
+                    time.sleep(300)
+            self.check_for_events()
+
+        if game_status == "completed":
+            self.events = self.get_api_response_dict(self.events_url)['events']['content']
+            for event in self.events:
+                if event['type'] in self.point_events_dict.keys():
+                    self.process_point_event(event, event["playerIds"])
 
     def get_lineups(self, is_starting, status):
         lineup = []
@@ -73,7 +76,7 @@ class Pulse:
         return lineup
 
     def process_point_event(self, event, player_ids):
-        logging.info(f"{self.fixture_id}: {event['type']} - {self.player_id_to_name_dict[player_ids[0]]}")
+        logging.info(f"{self.fixture_id}: {event['time']['label']}' {event['type']} - {self.player_id_to_name_dict[player_ids[0]]}")
         DbUtils.set_event({
             "id": int(event["id"]),
             "player_id": self.id_append_constant + str(player_ids[0]),
@@ -143,7 +146,7 @@ class Pulse:
 if __name__ == '__main__':
     try:
         init_logging(logging.INFO, filename=os.path.expanduser('~/logs/pulse.log'))
-        Pulse(46624)
+        Pulse(46624, "completed")
     except Exception as e:
         logging.info(traceback.format_exc())
         send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
