@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 
-from db_utils import DbUtils
+import db_utils
 from config import constants
 from utils import init_logging, send_error_mail
 
@@ -23,9 +23,9 @@ class Pulse:
 
         self.id_append_constant = "pulse_"
         self.non_point_events_dict = {
-            "game over": "end 14",
-            "half time": "end 1",
-            "full time": "end 2",
+            "end 14": "game over",
+            "end 1": "half time",
+            "end 2": "second half end",
             "substitution": "substitution"
         }
         self.point_events_dict = {
@@ -50,7 +50,7 @@ class Pulse:
             while True:
                 self.fixtures_resp = self.get_api_response_dict(self.fixture_url)
                 if self.fixtures_resp['status'] == GAME_START_STATUS:
-                    DbUtils.set_game_started(self.id_append_constant + str(self.fixture_id))
+                    db_utils.set_game_started(self.id_append_constant + str(self.fixture_id))
                     break
                 else:
                     time.sleep(300)
@@ -77,7 +77,7 @@ class Pulse:
 
     def process_point_event(self, event, player_ids):
         logging.info(f"{self.fixture_id}: {event['time']['label']}' {event['type']} - {self.player_id_to_name_dict[player_ids[0]]}")
-        DbUtils.set_event({
+        db_utils.set_event({
             "id": int(event["id"]),
             "player_id": self.id_append_constant + str(player_ids[0]),
             "fixture_id": self.id_append_constant + str(self.fixture_id),
@@ -87,7 +87,7 @@ class Pulse:
         })
         if len(player_ids) > 1:  # assist is the only case
             logging.info(f"{self.fixture_id}: assist - {self.player_id_to_name_dict[player_ids[1]]}")
-            DbUtils.set_event({
+            db_utils.set_event({
                 "id": int(event["id"]),
                 "player_id": self.id_append_constant + str(player_ids[1]),
                 "fixture_id": self.id_append_constant + str(self.fixture_id),
@@ -98,20 +98,20 @@ class Pulse:
 
     def process_non_point_event(self, event, player_ids):
         if event["type"] == self.non_point_events_dict["substitution"]:
-            DbUtils.set_substitution(self.id_append_constant + str(self.fixture_id),
+            db_utils.set_substitution(self.id_append_constant + str(self.fixture_id),
                                      self.id_append_constant + str(player_ids[0]),
                                      self.id_append_constant + str(player_ids[1]))
             logging.info(f"{self.fixture_id}: Substitution - "
                          f"In: {self.player_id_to_name_dict[player_ids[0]]}"
                          f"Out: {self.player_id_to_name_dict[player_ids[1]]}")
 
-        elif event["type"] == self.non_point_events_dict["half time"]:
+        elif event["type"] == self.non_point_events_dict["end 1"]:
             logging.info(f"{self.fixture_id}: Half Time - Sleeping for 13 mins")
             time.sleep(60*13)
 
-        elif event["type"] == self.non_point_events_dict["game over"]:
+        elif event["type"] == self.non_point_events_dict["end 14"]:
             logging.info(f"{self.fixture_id}: Game Over")
-            DbUtils.set_game_over(self.id_append_constant + str(self.fixture_id))
+            db_utils.set_game_over(self.id_append_constant + str(self.fixture_id))
             sys.exit()
 
     def check_for_events(self):
@@ -123,7 +123,7 @@ class Pulse:
             else:  # eg 43'
                 current_minute = resp['fixture']['clock']['label'].split("'")[0]
             logging.info(f"{self.fixture_id}: Minute {current_minute}'")
-            DbUtils.set_current_time(int(current_minute), self.id_append_constant + str(self.fixture_id))
+            db_utils.set_current_time(int(current_minute), self.id_append_constant + str(self.fixture_id))
             events = resp['events']['content']
             new_events_count = len(events) - current_events_count
             i = 0
@@ -135,6 +135,7 @@ class Pulse:
                     self.process_non_point_event(latest_event, latest_event["playerIds"])
                 i = i + 1
             current_events_count = len(events)
+            db_utils.set_expiry(self.id_append_constant + self.fixture_id, current_minute)
             time.sleep(60)
 
     @staticmethod
@@ -146,7 +147,8 @@ class Pulse:
 if __name__ == '__main__':
     try:
         init_logging(logging.INFO, filename=os.path.expanduser('~/logs/pulse.log'))
-        Pulse(46624, "completed")
+        Pulse(46689, "live")
     except Exception as e:
         logging.info(traceback.format_exc())
         send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
+

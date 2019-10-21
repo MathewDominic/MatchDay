@@ -5,13 +5,14 @@ import os
 import requests
 import traceback
 
+import db_utils
 from models import Fixture
 from utils import init_logging, send_error_mail
 
 if __name__ == '__main__':
     try:
         init_logging(logging.INFO, filename=os.path.expanduser('~/logs/matches.log'))
-        tomorrow_date = datetime.date.today() - datetime.timedelta(days=7)
+        tomorrow_date = datetime.date.today() + datetime.timedelta(days=1)
         logging.info("Matches for " + tomorrow_date.strftime("%d %b %Y"))
         url = "https://footballapi.pulselive.com/football/fixtures" \
               "?page=0&startDate={date}&comps={competition_id}".format(date=str(tomorrow_date), competition_id=1)
@@ -34,7 +35,7 @@ if __name__ == '__main__':
             }
             objects.append(obj)
             logging.info(str(int(match["id"])) + " : " + match["teams"][0]["team"]["shortName"] + " v " + match["teams"][1]["team"]["shortName"])
-        Fixture.insert_many(objects).execute()
+        db_utils.insert_fixtures(objects)
     except Exception as e:
         logging.info(traceback.format_exc())
         # send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
