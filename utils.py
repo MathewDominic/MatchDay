@@ -3,6 +3,7 @@ import logging
 import requests
 from logging.handlers import RotatingFileHandler
 
+
 def init_logging(LOG_LEVEL, filename=None, logger_name=""):
     if filename is not None:
         filename = filename
@@ -45,8 +46,11 @@ def to_ascii(unicode_str):
 def send_error_mail(to, body):
     return requests.post(
         "https://api.mailgun.net/v3/sandbox415bef09bf94429cbe10a8f6dd874063.mailgun.org/messages",
-        auth=("api", "key-f30b6a39a150194f19f93d2ffb997c1b"),
-        data={"from": "MatchDay <mailgun@sandbox415bef09bf94429cbe10a8f6dd874063.mailgun.org>",
-              "to": to,
-              "subject": "Matchday Error",
-              "text": body})
+        auth=("api", os.environ.get("MAILGUN_KEY", "")),
+        data={
+                "from": "MatchDay <mailgun@sandbox415bef09bf94429cbe10a8f6dd874063.mailgun.org>",
+                "to": to,
+                "subject": "Matchday Error",
+                "text": body
+             }
+        )
