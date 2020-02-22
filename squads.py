@@ -1,7 +1,11 @@
+import datetime
 import requests
 import json
 
 from models import Squad, Player
+
+from utils import get_pulse_response
+
 
 POSITION_DICT = {
     "D": "Defender",
@@ -10,17 +14,16 @@ POSITION_DICT = {
     "G": "Defender"
 }
 url = "https://footballapi.pulselive.com/football/teams?page=0&pageSize=100&altIds=true&compSeasons=274"
-resp = requests.get(url)
-data = json.loads(resp.content)['content']
+resp = get_pulse_response(url)
+data = resp['content']
 teams = []
-players = []
 
 for team in data:
     team_id = int(team['id'])
     url = f"https://footballapi.pulselive.com/football/teams/{team_id}/compseasons/274/staff?compSeasons=274&altIds=true&page=0&type=player"
-    resp = requests.get(url)
-    all_players = json.loads(resp.content)['players']
-
+    resp = get_pulse_response(url)
+    all_players = resp['players']
+    players = []
     for player in all_players:
         try:
             obj = {
@@ -30,7 +33,7 @@ for team in data:
                 "position": POSITION_DICT[player['info']['position']],
                 "image_path": None,
                 "nationality": player["nationalTeam"]["country"],
-                "team_id": "pulse_" + str(team_id)
+                "team_id": "pulse_" + str(team_id),
             }
         except:
             continue

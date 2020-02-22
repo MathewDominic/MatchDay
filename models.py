@@ -1,10 +1,17 @@
+import datetime
 import os
+
 from peewee import *
 
-DB_HOST = os.environ.get("PG_DB_HOST", "127.0.0.1")
-DB_PASSWORD = os.environ.get("PG_DB_PASSWORD")
-DB_USER = os.environ.get("PG_DB_USER")
-DB_DATABASE = os.environ.get("PG_DB_DATABASE")
+# DB_HOST = os.environ.get("PG_DB_HOST", "127.0.0.1")
+# DB_PASSWORD = os.environ.get("PG_DB_PASSWORD")
+# DB_USER = os.environ.get("PG_DB_USER")
+# DB_DATABASE = os.environ.get("PG_DB_DATABASE")
+
+DB_HOST = "localhost"
+DB_PASSWORD = ""
+DB_USER = "mathew"
+DB_DATABASE = "supersub"
 
 database = PostgresqlDatabase(
     DB_DATABASE, **{
@@ -24,11 +31,13 @@ class Squad(BaseModel):
     id = CharField()
     name = CharField()
     code = CharField()
-    logo = CharField()
-    kit_path = CharField()
+    logo = CharField(null=True)
+    kit_path = CharField(null=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
-        table_name = 'squads'
+        table_name = 'teams'
 
 
 class Player(BaseModel):
@@ -37,18 +46,24 @@ class Player(BaseModel):
     nationality = CharField()
     number = IntegerField()
     position = CharField()
-    image_path = CharField()
+    image_path = CharField(null=True)
     team_id = ForeignKeyField(Squad, backref='squads', field='id')
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         table_name = 'players'
 
 
 class Lineup(BaseModel):
+    id = AutoField()
     player_id = CharField()
     fixture_id = CharField()
     team_id = CharField()
+    position = CharField()
     status = CharField()
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         table_name = 'lineups'
@@ -65,20 +80,26 @@ class Fixture(BaseModel):
     competition_id = IntegerField()
     localteam_id = CharField()
     visitorteam_id = CharField()
+    localteam_score = IntegerField()
+    visitorteam_score = IntegerField()
     starts_by = IntegerField()
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         table_name = 'fixtures'
 
 
 class Event(BaseModel):
-    id = TextField()
+    id = TextField(unique=True)
     player_id = CharField()
     fixture_id = CharField()
     team_id = CharField()
     minute = IntegerField()
     type = CharField()
     points = IntegerField()
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         table_name = 'events'
@@ -95,16 +116,10 @@ class UserPick(BaseModel):
     duration = IntegerField()
     is_local_team = BooleanField()
     is_active = BooleanField()
-    is_local = BooleanField()
     points = IntegerField()
     player_position = TextField()
-    created_at = DateTimeField()
-    updated_at = DateTimeField()
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         table_name = 'user_picks'
-
-
-
-
-

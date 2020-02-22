@@ -1,5 +1,6 @@
-import os
+import json
 import logging
+import os
 import requests
 from logging.handlers import RotatingFileHandler
 
@@ -54,3 +55,21 @@ def send_error_mail(to, body):
                 "text": body
              }
         )
+
+
+def get_pulse_response(url):
+    headers = {
+        'authority': 'footballapi.pulselive.com',
+        'origin': 'https://www.premierleague.com',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
+        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'accept': '*/*',
+        'sec-fetch-site': 'cross-site',
+        'sec-fetch-mode': 'cors',
+        'referer': 'https://footballapi.pulselive.com/',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8'
+    }
+
+    resp = requests.request("GET", url, headers=headers)
+    return json.loads(resp.content)
