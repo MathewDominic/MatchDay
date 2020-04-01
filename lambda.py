@@ -1,19 +1,20 @@
+import os
 import boto3
 lambda_handlers = {
-    # "integration_denormalize_topics",
-    "integration_denormalize_polls",
-    # "integration_denormalize_feedback_requests",
-    # "integration_denormalize_reviews",
-    # "integration_denormalize_feedbacks",
-    # "integration_denormalize_new_goals",
-    # "integration_denormalize_goals",
-    # "integration_denormalize_applications",
-    # "integration_denormalize_employee_login",
-    # "integration_denormalize_new_surveys_stream",
-    # "integration_regress_surveys_stream",
-    # "integration_denormalize_cron",
-    # "integration_denormalize_conversations",
-    # "integration_denormalize_reward_redemptions"
+    "{}_denormalize_topics".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_polls".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_feedback_requests".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_reviews".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_feedbacks".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_new_goals".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_goals".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_applications".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_employee_login".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_new_surveys_stream".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_regress_surveys_stream".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_cron".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_conversations".format(os.environ.get("RUNTIME_ENVIRONMENT")),
+    "{}_denormalize_reward_redemptions".format(os.environ.get("RUNTIME_ENVIRONMENT"))"
 }
 s3 = boto3.client("s3")
 filename = "Archive.zip"
