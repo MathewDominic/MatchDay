@@ -17,7 +17,7 @@ lambda_handlers = {
     "{}_denormalize_reward_redemptions".format(os.environ.get("RUNTIME_ENVIRONMENT"))
 }
 s3 = boto3.client("s3")
-filename = "Archive.zip"
+filename = "dsv.zip"
 bucket = "reflektive-denormalizer-packages"
 with open(filename, "rb") as f:
     zipped_code = f.read()
@@ -28,11 +28,11 @@ params = {
 }
 sent = s3.put_object(Body=zipped_code, **params)
 
-lambda_client = boto3.client("lambda")
-for lambda_name in lambda_handlers:
-    print(lambda_name)
-    result = lambda_client.update_function_code(
-        FunctionName=lambda_name,
-        S3Bucket=bucket,
-        S3Key=filename
-    )
+# lambda_client = boto3.client("lambda")
+# for lambda_name in lambda_handlers:
+#     print(lambda_name)
+#     result = lambda_client.update_function_code(
+#         FunctionName=lambda_name,
+#         S3Bucket=bucket,
+#         S3Key=filename
+#     )
