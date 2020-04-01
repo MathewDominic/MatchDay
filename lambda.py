@@ -14,7 +14,7 @@ lambda_handlers = {
     "{}_regress_surveys_stream".format(os.environ.get("RUNTIME_ENVIRONMENT")),
     "{}_denormalize_cron".format(os.environ.get("RUNTIME_ENVIRONMENT")),
     "{}_denormalize_conversations".format(os.environ.get("RUNTIME_ENVIRONMENT")),
-    "{}_denormalize_reward_redemptions".format(os.environ.get("RUNTIME_ENVIRONMENT"))"
+    "{}_denormalize_reward_redemptions".format(os.environ.get("RUNTIME_ENVIRONMENT"))
 }
 s3 = boto3.client("s3")
 filename = "Archive.zip"
