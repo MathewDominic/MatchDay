@@ -105,6 +105,7 @@ class Pulse:
         minute = int(event["time"]["label"].split(" ")[0])
         if self.point_events_dict[event["type"]] == "save":
             player_id = self.localteam_gk_id if team_id == self.visitorteam_id else self.visitorteam_gk_id
+            team_id = self.visitorteam_id if player_ids[0] in self.localteam_player_ids else self.localteam_id
         db_utils.set_event({
             "id": int(event["id"]),
             "player_id": player_id,
