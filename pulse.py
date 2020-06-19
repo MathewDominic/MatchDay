@@ -58,13 +58,13 @@ class Pulse:
         if game_status == "live":
             while True:
                 if self.fixtures_resp['status'] == GAME_START_STATUS:
+                    logging.info(f"{self.fixture_id}: Game started")
                     db_utils.set_game_started(self.id_append_constant + str(self.fixture_id))
                     break
                 else:
                     time.sleep(300)
             self.check_for_events()
-
-        if game_status == "completed":
+        else:
             self.events = get_pulse_response(self.events_url)['events']['content']
             for event in self.events:
                 if event['type'] in self.point_events_dict.keys():
