@@ -62,7 +62,9 @@ class Pulse:
                     db_utils.set_game_started(self.id_append_constant + str(self.fixture_id))
                     break
                 else:
-                    time.sleep(300)
+                    sleep_seconds = 5
+                    logging.info(f"{self.fixture_id}: Game not started. Sleeping for {sleep_seconds} seconds")
+                    time.sleep(sleep_seconds)
             self.check_for_events()
         else:
             self.events = get_pulse_response(self.events_url)['events']['content']
