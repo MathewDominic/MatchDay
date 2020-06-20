@@ -73,3 +73,12 @@ def get_pulse_response(url):
 
     resp = requests.request("GET", url, headers=headers)
     return json.loads(resp.content)
+
+
+def calculate_proper_duration(duration):
+    if duration < 30:
+        return 15
+    elif duration < 60:
+        return 30
+    else:
+        return 60

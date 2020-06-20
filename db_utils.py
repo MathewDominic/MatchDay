@@ -25,8 +25,11 @@ def reset_user_picks(fixture_id):
 
 def set_event(event_dict):
     query = Event.get_or_create(**event_dict)
-    if query[1] is True:
+    if query[1]:
         update_points(event_dict["fixture_id"], event_dict["player_id"], event_dict["points"], event_dict["minute"])
+        return True
+    else:  # event already exists
+        return False
 
 
 def update_points(fixture_id, player_id, points, minute):

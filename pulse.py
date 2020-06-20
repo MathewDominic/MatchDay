@@ -7,9 +7,10 @@ import traceback
 
 import db_utils
 from config import constants
-from utils import init_logging, send_error_mail, get_pulse_response
+from utils import init_logging, send_error_mail, get_pulse_response, calculate_proper_duration
 
 GAME_START_STATUS = "L"
+MATCH_END_MINUTE = 90
 
 
 class Pulse:
@@ -62,7 +63,7 @@ class Pulse:
                     db_utils.set_game_started(self.id_append_constant + str(self.fixture_id))
                     break
                 else:
-                    sleep_seconds = 5
+                    sleep_seconds = 60
                     logging.info(f"{self.fixture_id}: Game not started. Sleeping for {sleep_seconds} seconds")
                     time.sleep(sleep_seconds)
             self.check_for_events()
@@ -71,6 +72,7 @@ class Pulse:
             for event in self.events:
                 if event['type'] in self.point_events_dict.keys():
                     self.process_point_event(event, event["playerIds"])
+            self.add_on_expiry_points(2 * MATCH_END_MINUTE + 1)
 
     def clean_up_fixture(self):
         db_utils.delete_lineup(self.id_append_constant + str(self.fixture_id))
@@ -100,39 +102,43 @@ class Pulse:
         return lineup
 
     def process_point_event(self, event, player_ids):
-        logging.info(f"{event['id']}: {event['time']['label']}' "
-                     f"{event['type']} - {self.player_id_to_name_dict[player_ids[0]]}")
         team_id = self.localteam_id if player_ids[0] in self.localteam_player_ids else self.visitorteam_id
         player_id = self.id_append_constant + str(player_ids[0])
         minute = int(event["time"]["label"].split(" ")[0])
+        points = constants["POINTS_DICT"][self.point_events_dict[event["type"]]]
         if self.point_events_dict[event["type"]] == "save":
             player_id = self.localteam_gk_id if team_id == self.visitorteam_id else self.visitorteam_gk_id
             team_id = self.visitorteam_id if player_ids[0] in self.localteam_player_ids else self.localteam_id
-        db_utils.set_event({
+        is_success = db_utils.set_event({
             "id": int(event["id"]),
             "player_id": player_id,
             "fixture_id": self.id_append_constant + str(self.fixture_id),
             "team_id": self.id_append_constant + str(team_id),
             "minute": minute,
             "type": self.point_events_dict[event["type"]],
-            "points": constants["POINTS_DICT"][self.point_events_dict[event["type"]]]
+            "points": points
         })
-        if len(player_ids) > 1 and event["type"] == "goal":
-            logging.info(f"{self.fixture_id}: assist - {self.player_id_to_name_dict[player_ids[1]]}")
-            db_utils.set_event({
-                "id": int(str(event["id"]) + "22"),  # random string added to prevent unique key error
-                "player_id": self.id_append_constant + str(player_ids[1]),
-                "fixture_id": self.id_append_constant + str(self.fixture_id),
-                "team_id": self.id_append_constant + str(team_id),
-                "minute": minute,
-                "type": "assist",
-                "points": constants["POINTS_DICT"]["assist"]
-            })
-        elif event["type"] == "goal":
+        if not is_success:
+            return
+        logging.info(f"{event['id']}: {event['time']['label']}' "
+                     f"{event['type']} - {self.player_id_to_name_dict[player_ids[0]]} ({points})")
+        if event["type"] == "goal":
             if team_id == self.localteam_id:
                 self.localteam_goal_minutes.append(minute)
             else:
                 self.visitorteam_goal_minutes.append(minute)
+
+            if len(player_ids) > 1:
+                logging.info(f"{self.fixture_id}: assist - {self.player_id_to_name_dict[player_ids[1]]} ({constants['POINTS_DICT']['assist']})")
+                db_utils.set_event({
+                    "id": int(str(event["id"]) + "22"),  # random string added to prevent unique key error
+                    "player_id": self.id_append_constant + str(player_ids[1]),
+                    "fixture_id": self.id_append_constant + str(self.fixture_id),
+                    "team_id": self.id_append_constant + str(team_id),
+                    "minute": minute,
+                    "type": "assist",
+                    "points": constants["POINTS_DICT"]["assist"]
+                })
 
     def process_non_point_event(self, event, player_ids):
         if event["type"] == "substitution":
@@ -145,10 +151,11 @@ class Pulse:
 
         elif event["type"] == "end 1":
             logging.info(f"{self.fixture_id}: Half Time - Sleeping for 13 mins")
-            # time.sleep(60*13)
+            time.sleep(60*13)
 
         elif event["type"] == "end 14":
             logging.info(f"{self.fixture_id}: Game Over")
+            self.add_on_expiry_points(2 * MATCH_END_MINUTE + 1)
             db_utils.set_game_over(self.id_append_constant + str(self.fixture_id))
             sys.exit()
 
@@ -157,9 +164,7 @@ class Pulse:
         current_minute = 0
         while True:
             resp = get_pulse_response(self.events_url + "&ts=" + str(int(datetime.datetime.now().timestamp())))
-            logging.info(f"event {resp['fixture']['clock']['label']}")
             fixture_resp = get_pulse_response(self.fixture_url + "?ts=" + str(int(datetime.datetime.now().timestamp())))
-            logging.info(f"fixture {fixture_resp['clock']['label']}")
 
             if " " in resp['fixture']['clock']['label']:  # eg 45 +2' - ignoring stoppage time
                 current_minute_event = int(resp['fixture']['clock']['label'].split(" ")[0])
@@ -181,21 +186,19 @@ class Pulse:
                                                self.id_append_constant + str(self.fixture_id))
             events = resp['events']['content']
             new_events_count = len(events) - current_events_count
-            i = 0
-            while i < new_events_count:
+            for i in range(new_events_count):
                 latest_event = events[i]
                 if latest_event['type'] in self.point_events_dict.keys():
                     self.process_point_event(latest_event, latest_event["playerIds"])
                 elif latest_event['type'] in self.non_point_events_dict.keys():
                     self.process_non_point_event(latest_event,
                                                  latest_event["playerIds"] if "playerIds" in latest_event else None)
-                i = i + 1
             current_events_count = len(events)
-            self.add_clean_sheet_points(current_minute)
+            self.add_on_expiry_points(current_minute)
             db_utils.set_expiry(self.id_append_constant + self.fixture_id, current_minute)
             time.sleep(60)
 
-    def add_clean_sheet_points(self, current_minute):
+    def add_on_expiry_points(self, current_minute):
         to_be_expired = db_utils.get_to_be_expired(self.id_append_constant + self.fixture_id, current_minute)
         for row in to_be_expired:
             if row.player_position == 'F':
@@ -205,22 +208,23 @@ class Pulse:
             for goal_minute in goal_minutes:
                 if row.minute_of_buy <= goal_minute <= row.minute_of_expiry:
                     goals_conceded += 1
+            player_id = int(row.player_id[len(self.id_append_constant):])
             if goals_conceded == 0:
-                db_utils.update_points(
-                    self.id_append_constant + self.fixture_id,
-                    row.player_id,
-                    constants["POINTS_DICT"][self.position_dict[row.player_position]][f"{row.duration}_min_no_goal"],
-                    row.minute_of_buy
-                )
+                duration = min(current_minute, row.minute_of_expiry) - row.minute_of_buy
+                if duration < 15:
+                    continue
+                duration = calculate_proper_duration(duration)
+                points = constants["POINTS_DICT"][self.position_dict[row.player_position]][f"{duration}_min_no_goal"]
+                logging.info(f"{self.fixture_id}: clean sheet - {self.player_id_to_name_dict[player_id]} ({points}) {duration} {row.player_position}")
             else:
-                db_utils.update_points(
-                    self.id_append_constant + self.fixture_id,
-                    row.player_id,
-                    constants["POINTS_DICT"][self.position_dict[row.player_position]]["concede_goal"] * goals_conceded,
-                    row.minute_of_buy
-                )
-
-
+                points = constants["POINTS_DICT"][self.position_dict[row.player_position]]["concede_goal"] * goals_conceded
+                logging.info(f"{self.fixture_id}: {goals_conceded} goals conceded - {self.player_id_to_name_dict[player_id]} ({points}) {row.player_position}")
+            db_utils.update_points(
+                self.id_append_constant + self.fixture_id,
+                row.player_id,
+                points,
+                row.minute_of_buy
+            )
 
 
 if __name__ == '__main__':
