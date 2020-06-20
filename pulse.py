@@ -150,8 +150,8 @@ class Pulse:
                          f"Out: {self.player_id_to_name_dict[player_ids[1]]}")
 
         elif event["type"] == "end 1":
-            logging.info(f"{self.fixture_id}: Half Time - Sleeping for 13 mins")
-            time.sleep(60*13)
+            logging.info(f"{self.fixture_id}: Half Time - Sleeping for 2 mins")
+            time.sleep(60*2)
 
         elif event["type"] == "end 14":
             logging.info(f"{self.fixture_id}: Game Over")
