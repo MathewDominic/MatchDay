@@ -58,6 +58,7 @@ class Pulse:
 
         if game_status == "live":
             while True:
+                self.fixtures_resp = get_pulse_response(self.fixture_url)
                 if self.fixtures_resp['status'] == GAME_START_STATUS:
                     logging.info(f"{self.fixture_id}: Game started")
                     db_utils.set_game_started(self.id_append_constant + str(self.fixture_id))
