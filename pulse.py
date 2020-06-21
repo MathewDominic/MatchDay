@@ -72,7 +72,7 @@ class Pulse:
             for event in self.events:
                 if event['type'] in self.point_events_dict.keys():
                     self.process_point_event(event, event["playerIds"])
-            self.add_on_expiry_points(2 * MATCH_END_MINUTE + 1)
+            self.process_expired_user_picks(2 * MATCH_END_MINUTE + 1)
 
     def clean_up_fixture(self):
         db_utils.delete_lineup(self.id_append_constant + str(self.fixture_id))
@@ -155,7 +155,7 @@ class Pulse:
 
         elif event["type"] == "end 14":
             logging.info(f"{self.fixture_id}: Game Over")
-            self.add_on_expiry_points(2 * MATCH_END_MINUTE + 1)
+            self.process_expired_user_picks(2 * MATCH_END_MINUTE + 1)
             db_utils.set_game_over(self.id_append_constant + str(self.fixture_id))
             sys.exit()
 
@@ -194,15 +194,12 @@ class Pulse:
                     self.process_non_point_event(latest_event,
                                                  latest_event["playerIds"] if "playerIds" in latest_event else None)
             current_events_count = len(events)
-            self.add_on_expiry_points(current_minute)
-            db_utils.set_expiry(self.id_append_constant + self.fixture_id, current_minute)
+            self.process_expired_user_picks(current_minute)
             time.sleep(60)
 
-    def add_on_expiry_points(self, current_minute):
+    def process_expired_user_picks(self, current_minute):
         to_be_expired = db_utils.get_to_be_expired(self.id_append_constant + self.fixture_id, current_minute)
         for row in to_be_expired:
-            if row.player_position == 'F':
-                continue
             goal_minutes = self.visitorteam_goal_minutes if row.is_local_team else self.localteam_goal_minutes
             goals_conceded = 0
             for goal_minute in goal_minutes:
@@ -210,7 +207,7 @@ class Pulse:
                     goals_conceded += 1
             player_id = int(row.player_id[len(self.id_append_constant):])
             if goals_conceded == 0:
-                duration = min(current_minute, row.minute_of_expiry) - row.minute_of_buy
+                duration = min(MATCH_END_MINUTE, row.minute_of_expiry) - row.minute_of_buy
                 if duration < 15:
                     continue
                 duration = calculate_proper_duration(duration)
@@ -219,12 +216,11 @@ class Pulse:
             else:
                 points = constants["POINTS_DICT"][self.position_dict[row.player_position]]["concede_goal"] * goals_conceded
                 logging.info(f"{self.fixture_id}: {goals_conceded} goals conceded - {self.player_id_to_name_dict[player_id]} ({points}) {row.player_position}")
-            db_utils.update_points(
-                self.id_append_constant + self.fixture_id,
-                row.player_id,
-                points,
-                row.minute_of_buy
+            db_utils.update_defensive_points(
+                row.id,
+                points
             )
+        db_utils.set_expiry(self.id_append_constant + self.fixture_id, current_minute)
 
 
 if __name__ == '__main__':
@@ -233,4 +229,4 @@ if __name__ == '__main__':
         Pulse(sys.argv[1], sys.argv[2])
     except Exception as e:
         logging.info(traceback.format_exc())
-        # send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())
+        send_error_mail(constants['NOTIF_MAIL'], traceback.format_exc())

@@ -76,6 +76,11 @@ def get_pulse_response(url):
 
 
 def calculate_proper_duration(duration):
+    '''
+    when a user makes a picks for 60 mins at minute 50, the pick actually plays
+    only for 40 minutes and not the mentioned 60. This function is to calculate
+    the actual amount of time he plays
+    '''
     if duration < 30:
         return 15
     elif duration < 60:

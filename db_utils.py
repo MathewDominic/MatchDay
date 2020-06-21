@@ -43,6 +43,14 @@ def update_points(fixture_id, player_id, points, minute):
     ).execute()
 
 
+def update_defensive_points(user_pick_id, points):
+    UserPick.update(
+        points=UserPick.points + points
+    ).where(
+        UserPick.id == user_pick_id,
+    ).execute()
+
+
 def set_substitution(in_player, out_player, fixture_id):
     Lineup.update(
         status='active'
@@ -103,6 +111,7 @@ def get_to_be_expired(fixture_id, minute):
     return UserPick.select().where(
         UserPick.is_active == True,
         UserPick.fixture_id == fixture_id,
-        UserPick.minute_of_expiry < minute
+        UserPick.minute_of_expiry < minute,
+        UserPick.player_position != 'F'
     )
 
