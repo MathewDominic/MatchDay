@@ -30,9 +30,11 @@ class Pulse:
         }
         self.point_events_dict = {
             "goal": "goal",
+            "penalty goal": "goal",
+            "penalty won": "assist",
             "yellow card": "yellow card",
             "red card": "red card",
-            "penalty miss": "penalty miss", #TODO: get pen miss type, change key
+            "penalty saved": "penalty miss",
             "own goal": "own goal",
             "attempt saved": "save"
         }
@@ -40,7 +42,7 @@ class Pulse:
             "G": "Goalkeeper",
             "D": "Defender",
             "M": "Midfielder",
-            "F": "Attacker",  # TODO: get pen miss type, change key
+            "F": "Attacker",
         }
 
         self.player_id_to_name_dict = {}

@@ -8,7 +8,7 @@ LEAGUES:
 
 POINTS_DICT:
     goal: 8
-    assist: 4
+    assist: 6
     yellow card: -1
     red card: -2
     own goal: -2
