@@ -16,19 +16,19 @@ POINTS_DICT:
     save: 1
 
     Goalkeeper:
-        15_min_no_goal: 2
-        30_min_no_goal: 4
+        15_min_no_goal: 1
+        30_min_no_goal: 3
         60_min_no_goal: 8
         concede_goal: -1
     Defender:
-        15_min_no_goal: 2
-        30_min_no_goal: 4
+        15_min_no_goal: 1
+        30_min_no_goal: 3
         60_min_no_goal: 8
         concede_goal: -1
     Midfielder:
-        15_min_no_goal: 1
-        30_min_no_goal: 2
-        60_min_no_goal: 4
+        15_min_no_goal: 0
+        30_min_no_goal: 1
+        60_min_no_goal: 2
         concede_goal: 0
 
 POSITION_DICT:
